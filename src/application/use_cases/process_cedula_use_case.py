@@ -37,12 +37,13 @@ class ProcessCedulaUseCase:
         self.config = config
         self.logger = logger.bind(use_case="ProcessCedula")
 
-    def execute(self, record: CedulaRecord) -> bool:
+    def execute(self, record: CedulaRecord, do_alt_tab: bool = False) -> bool:
         """
         Procesa una cédula digitándola en el formulario web.
 
         Args:
             record: Registro de cédula a procesar
+            do_alt_tab: Si True, hace Alt+Tab antes de procesar
 
         Returns:
             True si el procesamiento fue exitoso
@@ -65,10 +66,15 @@ class ProcessCedulaUseCase:
         )
 
         try:
-            # IMPORTANTE: Hacer Alt+Tab para cambiar a la ventana objetivo
-            self.logger.debug("Cambiando a ventana objetivo con Alt+Tab")
-            self.automation.press_key('alt+tab')
-            time.sleep(0.5)  # Esperar a que la ventana cambie y se enfoque
+            # OPCIONAL: Hacer Alt+Tab solo si se solicita (desde el botón)
+            if do_alt_tab:
+                self.logger.debug("Cambiando a ventana objetivo con Alt+Tab")
+                self.automation.press_key('alt+tab')
+
+                # Esperar a que la ventana se enfoque
+                time.sleep(0.4)
+
+                self.logger.debug("Ventana objetivo enfocada")
 
             # Marcar como en procesamiento
             record.mark_as_processing()

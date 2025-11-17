@@ -1,6 +1,6 @@
 """Implementación de OCR usando PaddleOCR (alternativa ligera a EasyOCR)."""
 import re
-import numpy as np
+import numpy as npz
 from PIL import Image
 from typing import List
 

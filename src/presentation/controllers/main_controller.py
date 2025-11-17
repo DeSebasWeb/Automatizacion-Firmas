@@ -66,6 +66,9 @@ class MainController(QObject):
         self._last_next_record_time = 0
         self._next_record_cooldown = 0.5  # 500ms mínimo entre pulsaciones
 
+        # Flag para evitar ejecuciones simultáneas
+        self._processing_next_record = False
+
         self._connect_signals()
         self._register_hotkeys()
 
@@ -78,7 +81,8 @@ class MainController(QObject):
         self.window.capture_requested.connect(self.handle_capture)
         self.window.extract_requested.connect(self.handle_extract)
         self.window.start_processing_requested.connect(self.handle_start_processing)
-        self.window.next_record_requested.connect(self.handle_next_record)
+        # IMPORTANTE: El botón usa handle_next_record_from_button (CON Alt+Tab)
+        self.window.next_record_requested.connect(self.handle_next_record_from_button)
         self.window.pause_requested.connect(self.handle_pause)
         self.window.resume_requested.connect(self.handle_resume)
 
@@ -86,9 +90,21 @@ class MainController(QObject):
         """Registra los atajos de teclado globales."""
         try:
             # Envolver handlers en try-except para evitar crashes
+            # IMPORTANTE: Usar QTimer para ejecutar en el thread principal de Qt
             def safe_handle_next():
                 try:
-                    self.handle_next_record()
+                    print("DEBUG: Ctrl+Q presionado - iniciando procesamiento SIN Alt+Tab")
+
+                    # Evitar ejecuciones simultáneas
+                    if self._processing_next_record:
+                        print("DEBUG: Ctrl+Q ignorado - ya hay un procesamiento en curso")
+                        return
+
+                    # Usar QTimer para ejecutar en el thread principal
+                    from PyQt6.QtCore import QTimer
+                    QTimer.singleShot(0, self.handle_next_record)
+                    print("DEBUG: Ctrl+Q - QTimer programado correctamente")
+
                 except Exception as e:
                     self.logger.error("Error en hotkey Ctrl+Q", error=str(e))
                     print(f"ERROR en Ctrl+Q: {e}")
@@ -97,14 +113,18 @@ class MainController(QObject):
 
             def safe_toggle_pause():
                 try:
-                    self._toggle_pause()
+                    # Usar QTimer para ejecutar en el thread principal
+                    from PyQt6.QtCore import QTimer
+                    QTimer.singleShot(0, self._toggle_pause)
                 except Exception as e:
                     self.logger.error("Error en hotkey F3", error=str(e))
                     print(f"ERROR en F3: {e}")
 
             def safe_select_area():
                 try:
-                    self.handle_select_area()
+                    # Usar QTimer para ejecutar en el thread principal
+                    from PyQt6.QtCore import QTimer
+                    QTimer.singleShot(0, self.handle_select_area)
                 except Exception as e:
                     self.logger.error("Error en hotkey F4", error=str(e))
                     print(f"ERROR en F4: {e}")
@@ -288,11 +308,15 @@ class MainController(QObject):
                 "INFO"
             )
             self.window.add_log(
-                "⚠️ IMPORTANTE: Abre la ventana/página donde vas a escribir las cédulas",
+                "📌 BOTÓN 'Siguiente': Hace Alt+Tab + escribe cédula",
                 "INFO"
             )
             self.window.add_log(
-                "Al presionar Ctrl+Q, se hará Alt+Tab automáticamente para cambiar de ventana",
+                "📌 CTRL+Q: Solo escribe cédula (sin Alt+Tab)",
+                "INFO"
+            )
+            self.window.add_log(
+                "⚠️ IMPORTANTE: Enfoca manualmente la ventana objetivo antes de usar Ctrl+Q",
                 "INFO"
             )
 
@@ -302,11 +326,31 @@ class MainController(QObject):
             self.logger.error("Error al iniciar procesamiento", error=str(e))
             self.window.add_log(f"Error: {str(e)}", "ERROR")
 
+    def handle_next_record_from_button(self):
+        """Maneja el procesamiento desde el BOTÓN (CON Alt+Tab)."""
+        self._handle_next_record_internal(do_alt_tab=True)
+
     def handle_next_record(self):
-        """Maneja el procesamiento del siguiente registro."""
+        """Maneja el procesamiento desde Ctrl+Q (SIN Alt+Tab)."""
+        self._handle_next_record_internal(do_alt_tab=False)
+
+    def _handle_next_record_internal(self, do_alt_tab: bool = False):
+        """Maneja el procesamiento del siguiente registro.
+
+        Args:
+            do_alt_tab: Si True, hace Alt+Tab antes de escribir
+        """
         import time
 
         try:
+            # Evitar ejecuciones simultáneas
+            if self._processing_next_record:
+                self.logger.debug("Ctrl+Q ignorado - procesamiento ya en curso")
+                return
+
+            # Marcar como procesando
+            self._processing_next_record = True
+
             # Throttling: Ignorar si se presionó muy rápido
             current_time = time.time()
             time_since_last = current_time - self._last_next_record_time
@@ -316,6 +360,7 @@ class MainController(QObject):
                     "Ignorando Ctrl+Q (presionado muy rápido)",
                     time_since_last=f"{time_since_last:.2f}s"
                 )
+                self._processing_next_record = False
                 return
 
             self._last_next_record_time = current_time
@@ -324,6 +369,7 @@ class MainController(QObject):
 
             if session.status != SessionStatus.RUNNING:
                 self.logger.debug("Sesión no está en estado RUNNING, ignorando Ctrl+Q")
+                self._processing_next_record = False
                 return
 
             record = session.get_current_record()
@@ -331,13 +377,18 @@ class MainController(QObject):
             if not record:
                 self.window.add_log("No hay más registros para procesar", "INFO")
                 self.logger.info("No hay más registros")
+                self._processing_next_record = False
                 return
 
             self.logger.info("Procesando registro", cedula=record.cedula, index=record.index)
-            self.window.add_log(f"Procesando: {record.cedula}", "INFO")
+            self.window.add_log(f"🔄 Procesando cédula {record.index + 1}/{session.total_records}: {record.cedula}", "INFO")
 
-            # Procesar la cédula
-            success = self.process_use_case.execute(record)
+            # Mostrar mensaje solo si se va a hacer Alt+Tab
+            if do_alt_tab:
+                self.window.add_log("⏳ Cambiando a ventana objetivo con Alt+Tab...", "INFO")
+
+            # Procesar la cédula (con o sin Alt+Tab según parámetro)
+            success = self.process_use_case.execute(record, do_alt_tab=do_alt_tab)
 
             if success:
                 self.window.add_log(
@@ -359,6 +410,9 @@ class MainController(QObject):
             self.window.add_log(f"Error al procesar registro: {str(e)}", "ERROR")
             import traceback
             traceback.print_exc()
+        finally:
+            # CRÍTICO: Siempre liberar el flag
+            self._processing_next_record = False
 
     def handle_pause(self):
         """Maneja la pausa del procesamiento."""
