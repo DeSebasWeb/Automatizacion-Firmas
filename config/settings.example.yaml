@@ -1,0 +1,35 @@
+# Configuración de ejemplo
+# Copiar este archivo como settings.yaml y ajustar según necesidad
+
+# Área de captura (se configura automáticamente desde la UI)
+capture_area: null
+
+# Coordenadas del campo de búsqueda en el formulario web
+search_field:
+  x: null  # Coordenada X del campo
+  y: null  # Coordenada Y del campo
+
+# Configuración de automatización
+automation:
+  typing_interval: 0.05      # Intervalo entre teclas (segundos)
+  pre_enter_delay: 0.3       # Espera antes de presionar Enter
+  post_enter_delay: 0.5      # Espera después de presionar Enter
+
+# Configuración de OCR
+ocr:
+  language: spa              # Idioma de Tesseract (spa = español)
+  min_confidence: 50.0       # Confianza mínima para aceptar un resultado (0-100)
+  psm: 6                     # Page Segmentation Mode (ver docs de Tesseract)
+  # tesseract_path: "C:\\Program Files\\Tesseract-OCR\\tesseract.exe"  # Solo Windows si no está en PATH
+
+# Atajos de teclado
+hotkeys:
+  next_record: f2            # Procesar siguiente registro
+  pause: f3                  # Pausar/Reanudar
+  capture_area: f4           # Seleccionar área
+
+# Configuración de interfaz
+ui:
+  theme: light               # Tema de la interfaz (light/dark)
+  window_width: 900          # Ancho de ventana
+  window_height: 700         # Alto de ventana

@@ -1,0 +1,45 @@
+# Core
+python-dotenv==1.0.0
+
+# GUI
+PyQt6==6.6.1
+PyQt6-Qt6==6.6.1
+
+# OCR and Image Processing
+pytesseract==0.3.10
+opencv-python==4.9.0.80
+Pillow==10.3.0
+numpy==1.26.4
+
+# OCR Avanzado para escritura manual (instalar UNO de estos):
+# Opción 1: PaddleOCR (más ligero, recomendado)
+# paddleocr>=2.7.0
+# paddlepaddle>=2.5.0
+
+# Opción 2: EasyOCR (requiere PyTorch, más pesado)
+# easyocr==1.7.1
+# torch==2.1.2
+# torchvision==0.16.2
+
+# Automation
+pyautogui==0.9.54
+pynput==1.7.6
+
+# Configuration
+pyyaml==6.0.1
+
+# Logging
+structlog==24.1.0
+
+# Testing
+pytest==8.0.0
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+
+# Type checking
+mypy==1.8.0
+
+# Code quality
+black==24.1.0
+flake8==7.0.0
+isort==5.13.2

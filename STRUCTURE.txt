@@ -1,0 +1,233 @@
+ESTRUCTURA COMPLETA DEL PROYECTO
+================================================================================
+
+ProyectoFirmasAutomatizacion/
+│
+├── main.py                          # Punto de entrada de la aplicación
+│
+├── src/                             # Código fuente
+│   ├── __init__.py
+│   │
+│   ├── domain/                      # CAPA DE DOMINIO
+│   │   ├── __init__.py
+│   │   ├── entities/                # Entidades del negocio
+│   │   │   ├── __init__.py
+│   │   │   ├── cedula_record.py     # Entidad CedulaRecord + RecordStatus
+│   │   │   ├── capture_area.py      # Entidad CaptureArea
+│   │   │   └── processing_session.py # Entidad ProcessingSession + SessionStatus
+│   │   │
+│   │   └── ports/                   # Interfaces (puertos)
+│   │       ├── __init__.py
+│   │       ├── ocr_port.py          # Interface para OCR
+│   │       ├── screen_capture_port.py # Interface para captura
+│   │       ├── automation_port.py   # Interface para automatización
+│   │       ├── config_port.py       # Interface para configuración
+│   │       └── logger_port.py       # Interface para logging
+│   │
+│   ├── application/                 # CAPA DE APLICACIÓN
+│   │   ├── __init__.py
+│   │   └── use_cases/               # Casos de uso
+│   │       ├── __init__.py
+│   │       ├── capture_screen_use_case.py    # Capturar pantalla
+│   │       ├── extract_cedulas_use_case.py   # Extraer cédulas
+│   │       ├── process_cedula_use_case.py    # Procesar cédula
+│   │       └── manage_session_use_case.py    # Gestionar sesión
+│   │
+│   ├── infrastructure/              # CAPA DE INFRAESTRUCTURA
+│   │   ├── __init__.py
+│   │   ├── ocr/                     # Implementación OCR
+│   │   │   ├── __init__.py
+│   │   │   └── tesseract_ocr.py     # OCR con Tesseract
+│   │   │
+│   │   ├── capture/                 # Implementación Captura
+│   │   │   ├── __init__.py
+│   │   │   └── pyautogui_capture.py # Captura con PyAutoGUI
+│   │   │
+│   │   └── automation/              # Implementación Automatización
+│   │       ├── __init__.py
+│   │       └── pyautogui_automation.py # Automatización con PyAutoGUI
+│   │
+│   ├── presentation/                # CAPA DE PRESENTACIÓN
+│   │   ├── __init__.py
+│   │   ├── ui/                      # Componentes de interfaz
+│   │   │   ├── __init__.py
+│   │   │   ├── main_window.py       # Ventana principal (PyQt6)
+│   │   │   └── area_selector.py     # Widget selector de área
+│   │   │
+│   │   └── controllers/             # Controladores
+│   │       ├── __init__.py
+│   │       └── main_controller.py   # Controlador principal
+│   │
+│   └── shared/                      # UTILIDADES COMPARTIDAS
+│       ├── __init__.py
+│       ├── logging/                 # Sistema de logging
+│       │   ├── __init__.py
+│       │   └── structured_logger.py # Logger estructurado
+│       │
+│       ├── config/                  # Gestión de configuración
+│       │   ├── __init__.py
+│       │   └── yaml_config.py       # Configuración YAML
+│       │
+│       └── utils/                   # Utilidades generales
+│           ├── __init__.py
+│           └── image_utils.py       # Utilidades de imagen
+│
+├── tests/                           # Tests
+│   ├── __init__.py
+│   ├── unit/                        # Tests unitarios
+│   │   ├── __init__.py
+│   │   ├── test_cedula_record.py
+│   │   └── test_processing_session.py
+│   │
+│   └── integration/                 # Tests de integración
+│       └── __init__.py
+│
+├── config/                          # Archivos de configuración
+│   └── settings.example.yaml        # Ejemplo de configuración
+│
+├── logs/                            # Archivos de log (generados)
+│   └── app_YYYYMMDD.log
+│
+├── requirements.txt                 # Dependencias Python
+├── .gitignore                       # Archivos ignorados por Git
+├── .env.example                     # Variables de entorno de ejemplo
+├── pytest.ini                       # Configuración de pytest
+│
+├── install.bat                      # Script de instalación (Windows)
+├── run.bat                          # Script para ejecutar (Windows)
+│
+├── README.md                        # Documentación principal
+├── QUICK_START.md                   # Guía de inicio rápido
+├── ARCHITECTURE.md                  # Documentación de arquitectura
+├── WORKFLOW.md                      # Flujos de trabajo detallados
+├── PROJECT_SUMMARY.md               # Resumen del proyecto
+├── CHANGELOG.md                     # Historial de cambios
+└── STRUCTURE.txt                    # Este archivo
+
+================================================================================
+ESTADÍSTICAS DEL PROYECTO
+================================================================================
+
+Archivos Python:           43
+Archivos de Documentación: 7
+Scripts de Utilidad:       2
+Archivos de Config:        3
+
+Capas Arquitectónicas:     4 (Domain, Application, Infrastructure, Presentation)
+Entidades:                 3 (CedulaRecord, CaptureArea, ProcessingSession)
+Puertos (Interfaces):      5 (OCR, Capture, Automation, Config, Logger)
+Casos de Uso:              4 (Capture, Extract, Process, ManageSession)
+Adaptadores:               5 (Tesseract, PyAutoGUI x2, YAML, Structlog)
+
+Tests Unitarios:           2 archivos (expandible)
+Cobertura de Código:       Configurado con pytest-cov
+
+================================================================================
+ARCHIVOS CLAVE
+================================================================================
+
+PUNTO DE ENTRADA:
+  main.py                  - Inicialización y dependency injection
+
+DOMINIO:
+  cedula_record.py         - Lógica de registros de cédula
+  processing_session.py    - Lógica de sesiones de procesamiento
+  capture_area.py          - Lógica de áreas de captura
+
+CASOS DE USO:
+  capture_screen_use_case.py    - Orquesta captura de pantalla
+  extract_cedulas_use_case.py   - Orquesta extracción OCR
+  process_cedula_use_case.py    - Orquesta digitación automática
+  manage_session_use_case.py    - Orquesta gestión de sesión
+
+INFRAESTRUCTURA:
+  tesseract_ocr.py         - Implementación OCR con preprocesamiento
+  pyautogui_capture.py     - Implementación de captura de pantalla
+  pyautogui_automation.py  - Implementación de automatización
+
+PRESENTACIÓN:
+  main_window.py           - Ventana principal con PyQt6
+  main_controller.py       - Controlador que conecta UI con casos de uso
+  area_selector.py         - Widget de selección de área
+
+UTILIDADES:
+  structured_logger.py     - Sistema de logging estructurado
+  yaml_config.py           - Gestión de configuración YAML
+  image_utils.py           - Utilidades para imágenes
+
+DOCUMENTACIÓN:
+  README.md                - Guía completa
+  QUICK_START.md           - Inicio rápido
+  ARCHITECTURE.md          - Arquitectura detallada
+
+================================================================================
+DEPENDENCIAS PRINCIPALES
+================================================================================
+
+GUI:
+  - PyQt6 6.6.1            # Framework de interfaz gráfica
+
+OCR & Imagen:
+  - pytesseract 0.3.10     # Wrapper de Tesseract
+  - opencv-python 4.8.1    # Pre-procesamiento de imágenes
+  - Pillow 10.1.0          # Manipulación de imágenes
+
+Automatización:
+  - pyautogui 0.9.54       # Automatización de GUI
+  - pynput 1.7.6           # Hotkeys globales
+
+Configuración & Logging:
+  - pyyaml 6.0.1           # Configuración YAML
+  - structlog 24.1.0       # Logging estructurado
+
+Testing:
+  - pytest 7.4.3           # Framework de testing
+  - pytest-cov 4.1.0       # Cobertura de código
+
+================================================================================
+FLUJO DE EJECUCIÓN
+================================================================================
+
+1. Usuario ejecuta main.py
+2. Se configura dependency injection
+3. Se crea la ventana principal (MainWindow)
+4. Usuario selecciona área (F4)
+5. Usuario captura pantalla
+6. Usuario extrae cédulas con OCR
+7. Sistema crea sesión de procesamiento
+8. Usuario inicia procesamiento
+9. Sistema digita cédulas automáticamente
+10. Usuario valida y presiona F2 para cada registro
+11. Sistema completa sesión y genera estadísticas
+
+================================================================================
+PATRONES Y PRINCIPIOS APLICADOS
+================================================================================
+
+Arquitectura:
+  - Hexagonal Architecture (Ports & Adapters)
+  - Clean Architecture
+  - Layered Architecture
+
+Patrones de Diseño:
+  - Dependency Injection
+  - Use Case Pattern
+  - Observer Pattern (Signals/Slots)
+  - Adapter Pattern
+
+Principios SOLID:
+  ✓ Single Responsibility
+  ✓ Open/Closed
+  ✓ Liskov Substitution
+  ✓ Interface Segregation
+  ✓ Dependency Inversion
+
+Otros:
+  - Type Hints (100%)
+  - Docstrings completos
+  - Error handling robusto
+  - Logging exhaustivo
+
+================================================================================
+FIN DE ESTRUCTURA
+================================================================================

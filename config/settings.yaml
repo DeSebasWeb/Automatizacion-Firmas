@@ -1,0 +1,26 @@
+automation:
+  post_enter_delay: 0.5
+  pre_enter_delay: 0.3
+  typing_interval: 0.05
+capture_area:
+  height: 453
+  width: 266
+  x: 860
+  y: 141
+hotkeys:
+  capture_area: f4
+  next_record: ctrl+q
+  pause: f3
+ocr:
+  gpu: false
+  language: spa
+  min_confidence: 30.0
+  paddle_lang: es
+  psm: 6
+search_field:
+  x: null
+  y: null
+ui:
+  theme: light
+  window_height: 700
+  window_width: 900
