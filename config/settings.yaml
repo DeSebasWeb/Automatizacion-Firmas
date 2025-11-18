@@ -3,19 +3,59 @@ automation:
   pre_enter_delay: 0.3
   typing_interval: 0.05
 capture_area:
-  height: 359
-  width: 225
-  x: 820
-  y: 299
+  height: 474
+  width: 383
+  x: 922
+  y: 434
 hotkeys:
   capture_area: f4
   next_record: ctrl+q
   pause: f3
+image_preprocessing:
+  binarize:
+    enabled: false
+    method: otsu
+  contrast:
+    clip_limit: 2.5
+    enabled: true
+    tile_grid_size:
+    - 8
+    - 8
+  denoise:
+    enabled: true
+    h: 8
+    search_window_size: 21
+    template_window_size: 7
+  deskew:
+    enabled: false
+  enabled: true
+  enhance_edges:
+    enabled: false
+  morphology:
+    enabled: false
+    iterations: 1
+    kernel_size:
+    - 2
+    - 2
+  normalize_illumination:
+    enabled: false
+  output_dir: temp/processed
+  save_processed_images: false
+  sharpen:
+    enabled: true
+    intensity: normal
+    use_unsharp_mask: false
+  upscale_factor: 3
 ocr:
+  google_vision:
+    authentication: application_default
+    confidence_threshold: 0.85
+    project_id: firmas-automatizacion
   gpu: false
   language: spa
   min_confidence: 30.0
   paddle_lang: es
+  provider: google_vision
   psm: 6
 search_field:
   x: null

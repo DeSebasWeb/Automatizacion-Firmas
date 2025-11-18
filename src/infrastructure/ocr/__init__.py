@@ -8,12 +8,6 @@ except Exception:
     GOOGLE_VISION_AVAILABLE = False
 
 try:
-    from .trocr_adapter import TrOCRAdapter
-    TROCR_AVAILABLE = True
-except Exception:
-    TROCR_AVAILABLE = False
-
-try:
     from .easyocr_adapter import EasyOCRAdapter
     EASYOCR_AVAILABLE = True
 except Exception:
@@ -29,9 +23,6 @@ __all__ = ['TesseractOCR', 'ManualOCR']
 
 if GOOGLE_VISION_AVAILABLE:
     __all__.append('GoogleVisionAdapter')
-
-if TROCR_AVAILABLE:
-    __all__.append('TrOCRAdapter')
 
 if EASYOCR_AVAILABLE:
     __all__.append('EasyOCRAdapter')

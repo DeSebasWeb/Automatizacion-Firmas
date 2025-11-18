@@ -1,18 +1,38 @@
-# Core
+# =============================================================================
+# ASISTENTE DE DIGITACIÓN DE CÉDULAS - DEPENDENCIAS
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# CORE
+# -----------------------------------------------------------------------------
 python-dotenv==1.0.0
 
-# GUI
+# -----------------------------------------------------------------------------
+# GUI (Interfaz Gráfica)
+# -----------------------------------------------------------------------------
 PyQt6==6.6.1
 PyQt6-Qt6==6.6.1
 
-# OCR and Image Processing
-pytesseract==0.3.10
-opencv-python==4.9.0.80
-Pillow==10.3.0
-numpy==1.26.4
+# -----------------------------------------------------------------------------
+# OCR Y PROCESAMIENTO DE IMÁGENES
+# -----------------------------------------------------------------------------
 
-# OCR Avanzado para escritura manual (instalar UNO de estos):
-# Opción 1: PaddleOCR (más ligero, recomendado)
+# Google Cloud Vision API - OCR principal (óptimo para escritura manual)
+google-cloud-vision>=3.5.0
+
+# Procesamiento de imágenes
+opencv-python>=4.9.0.80  # CRÍTICO: Preprocesamiento avanzado de imágenes
+Pillow>=10.3.0           # Manipulación de imágenes
+numpy>=1.26.4            # Operaciones numéricas
+
+# Tesseract OCR (legacy, opcional)
+pytesseract==0.3.10
+
+# -----------------------------------------------------------------------------
+# OCR AVANZADO ADICIONAL (OPCIONALES - Solo si necesitas más motores)
+# -----------------------------------------------------------------------------
+
+# Opción 1: PaddleOCR (más ligero, recomendado para español)
 # paddleocr>=2.7.0
 # paddlepaddle>=2.5.0
 
@@ -21,25 +41,29 @@ numpy==1.26.4
 # torch==2.1.2
 # torchvision==0.16.2
 
-# Automation
-pyautogui==0.9.54
-pynput==1.7.6
+# -----------------------------------------------------------------------------
+# AUTOMATIZACIÓN
+# -----------------------------------------------------------------------------
+pyautogui==0.9.54  # Automatización de GUI
+pynput==1.7.6      # Hotkeys globales
 
-# Configuration
-pyyaml==6.0.1
+# -----------------------------------------------------------------------------
+# CONFIGURACIÓN Y LOGGING
+# -----------------------------------------------------------------------------
+pyyaml==6.0.1      # Configuración YAML
+structlog==24.1.0  # Logging estructurado
 
-# Logging
-structlog==24.1.0
-
-# Testing
+# -----------------------------------------------------------------------------
+# TESTING
+# -----------------------------------------------------------------------------
 pytest==8.0.0
 pytest-cov==4.1.0
 pytest-mock==3.12.0
 
-# Type checking
+# -----------------------------------------------------------------------------
+# TYPE CHECKING Y CALIDAD DE CÓDIGO
+# -----------------------------------------------------------------------------
 mypy==1.8.0
-
-# Code quality
 black==24.1.0
 flake8==7.0.0
 isort==5.13.2

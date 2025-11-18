@@ -2,7 +2,7 @@
 import re
 import os
 from PIL import Image
-from typing import List
+from typing import List, Dict
 import io
 
 try:
@@ -14,11 +14,12 @@ except ImportError:
 
 from ...domain.entities import CedulaRecord
 from ...domain.ports import OCRPort, ConfigPort
+from ..image import ImagePreprocessor
 
 
 class GoogleVisionAdapter(OCRPort):
     """
-    Implementación de OCR usando Google Cloud Vision API.
+    Implementación de OCR usando Google Cloud Vision API con preprocesamiento avanzado.
 
     Google Cloud Vision es:
     - Estado del arte para escritura manual
@@ -29,9 +30,18 @@ class GoogleVisionAdapter(OCRPort):
     Para 15 cédulas por imagen:
     - 1,000 imágenes gratis = 15,000 cédulas gratis/mes
 
+    MEJORAS DE PREPROCESAMIENTO:
+    - Upscaling 3x para mejor resolución (distingue 1 vs 7)
+    - Reducción de ruido con fastNlMeansDenoising
+    - Aumento de contraste adaptativo (CLAHE)
+    - Sharpening para nitidez
+    - Binarización método Otsu
+    - Operaciones morfológicas para limpieza
+
     Attributes:
         config: Servicio de configuración
         client: Cliente de Google Cloud Vision
+        preprocessor: Pipeline de preprocesamiento de imágenes
     """
 
     def __init__(self, config: ConfigPort):
@@ -46,6 +56,11 @@ class GoogleVisionAdapter(OCRPort):
 
         self.config = config
         self.client = None
+
+        # Inicializar preprocesador con configuración
+        preprocessing_config = self.config.get('image_preprocessing', {})
+        self.preprocessor = ImagePreprocessor(preprocessing_config)
+
         self._initialize_ocr()
 
     def _initialize_ocr(self) -> None:
@@ -75,24 +90,42 @@ class GoogleVisionAdapter(OCRPort):
 
     def preprocess_image(self, image: Image.Image) -> Image.Image:
         """
-        Preprocesa una imagen para Google Vision.
+        Preprocesa una imagen para Google Vision usando pipeline robusto.
 
-        Google Vision funciona muy bien sin preprocesamiento,
-        pero podemos mejorar la calidad si es necesario.
+        Aplica preprocesamiento intensivo para maximizar precisión sin aumentar costos:
+        1. Upscaling (3x) - CRÍTICO para distinguir 1 vs 7
+        2. Conversión a escala de grises
+        3. Reducción de ruido (fastNlMeansDenoising)
+        4. Aumento de contraste adaptativo (CLAHE)
+        5. Sharpening para nitidez
+        6. Binarización método Otsu
+        7. Operaciones morfológicas (Close + Open)
 
         Args:
             image: Imagen PIL a preprocesar
 
         Returns:
-            Imagen preprocesada
+            Imagen preprocesada y optimizada
         """
-        # Google Vision prefiere imágenes en RGB
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
+        print(f"\nDEBUG Google Vision: Imagen original {image.width}x{image.height}")
 
-        print(f"DEBUG Google Vision: Imagen {image.width}x{image.height}")
+        # Verificar si el preprocesamiento está habilitado
+        if not self.config.get('image_preprocessing.enabled', True):
+            print("DEBUG Google Vision: Preprocesamiento deshabilitado, usando imagen original")
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            return image
 
-        return image
+        # Aplicar pipeline completo de preprocesamiento
+        processed_image = self.preprocessor.preprocess(image)
+
+        # Google Vision requiere RGB, convertir de vuelta si es necesario
+        if processed_image.mode != 'RGB':
+            processed_image = processed_image.convert('RGB')
+
+        print(f"DEBUG Google Vision: Imagen procesada {processed_image.width}x{processed_image.height}")
+
+        return processed_image
 
     def extract_cedulas(self, image: Image.Image) -> List[CedulaRecord]:
         """

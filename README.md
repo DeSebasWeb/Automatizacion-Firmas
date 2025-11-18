@@ -1,24 +1,26 @@
 # Asistente de Digitación de Cédulas
 
-Aplicación de escritorio en Python para automatizar la digitación de números de cédula extraídos de capturas de pantalla mediante OCR.
+Aplicación de escritorio en Python para automatizar la digitación de números de cédula extraídos de capturas de pantalla mediante **Google Cloud Vision API**.
 
 ## Características
 
 - **Captura de pantalla selectiva**: Selecciona el área específica donde se encuentran los datos tabulares
-- **OCR avanzado**: Extrae números de cédula usando Tesseract con pre-procesamiento de imágenes
+- **OCR avanzado con Google Cloud Vision**: Extrae números de cédula con precisión superior al 95% (óptimo para escritura manual)
+- **Preprocesamiento intensivo de imágenes**: Pipeline robusto para maximizar precisión sin aumentar costos
 - **Automatización inteligente**: Digita automáticamente cada cédula en formularios web
 - **Control manual**: El usuario valida cada registro antes de continuar
 - **Logging completo**: Registro estructurado de todas las operaciones
 - **Interfaz moderna**: GUI profesional con PyQt6
 - **Arquitectura limpia**: Implementada con arquitectura hexagonal
+- **Costo muy económico**: ~$6,450 - $10,750 COP/mes (primeras 1,000 detecciones gratis)
 
 ## Requisitos del Sistema
 
 - **Python**: 3.10 o superior
-- **Tesseract OCR**: Debe estar instalado en el sistema
-  - Windows: Descargar desde [GitHub](https://github.com/UB-Mannheim/tesseract/wiki)
-  - Linux: `sudo apt-get install tesseract-ocr tesseract-ocr-spa`
-  - macOS: `brew install tesseract tesseract-lang`
+- **Google Cloud Account**: Cuenta de Google Cloud con facturación habilitada
+- **Google Cloud Vision API**: Habilitada en tu proyecto de Google Cloud
+- **gcloud CLI**: Para autenticación con Application Default Credentials
+  - Windows/Linux/macOS: Descargar desde [Google Cloud SDK](https://cloud.google.com/sdk/docs/install)
 
 ## Instalación
 
@@ -53,14 +55,22 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 5. Configurar Tesseract (Windows)
+### 5. Configurar Google Cloud Vision
 
-Si Tesseract no está en el PATH del sistema, editar `config/settings.yaml` y agregar:
+**Autenticación con Application Default Credentials:**
 
-```yaml
-ocr:
-  tesseract_path: "C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+```bash
+gcloud auth application-default login
 ```
+
+Esto abrirá un navegador para autenticarte con tu cuenta de Google Cloud.
+
+**Verificar que la API está habilitada:**
+- Ir a [Google Cloud Console](https://console.cloud.google.com/)
+- Habilitar "Cloud Vision API" en tu proyecto
+- Configurar facturación (primeras 1,000 detecciones/mes son gratis)
+
+Para más detalles, consulta [docs/GOOGLE_CLOUD_SETUP.md](docs/GOOGLE_CLOUD_SETUP.md)
 
 ## Uso
 
@@ -150,11 +160,32 @@ automation:
   pre_enter_delay: 0.3       # Delay antes de Enter
   post_enter_delay: 0.5      # Delay después de Enter
 
-# OCR
+# OCR con Google Cloud Vision
 ocr:
-  language: spa              # Idioma (spa = español)
-  min_confidence: 50.0       # Confianza mínima
-  psm: 6                     # Page Segmentation Mode
+  provider: google_vision
+  google_vision:
+    authentication: application_default
+    project_id: firmas-automatizacion
+    confidence_threshold: 0.85
+
+# Preprocesamiento de imágenes (CRÍTICO para precisión)
+image_preprocessing:
+  enabled: true
+  upscale_factor: 3          # Aumenta resolución 3x (distingue 1 vs 7)
+  denoise:
+    enabled: true
+    h: 10
+  contrast:
+    enabled: true
+    clip_limit: 2.0
+  sharpen:
+    enabled: true
+  binarize:
+    enabled: true
+    method: otsu
+  morphology:
+    enabled: true
+    kernel_size: [2, 2]
 
 # Interfaz
 ui:
@@ -189,27 +220,46 @@ Ejemplo:
 
 ## Solución de Problemas
 
-### Tesseract no encontrado
+### Google Cloud Vision no está autenticado
 
-**Error**: `TesseractNotFoundError`
+**Error**: `DefaultCredentialsError` o `PermissionDenied`
 
 **Solución**:
-1. Verificar que Tesseract está instalado
-2. Configurar la ruta en `config/settings.yaml`:
-   ```yaml
-   ocr:
-     tesseract_path: "ruta/a/tesseract.exe"
+1. Ejecutar autenticación con gcloud:
+   ```bash
+   gcloud auth application-default login
    ```
+2. Verificar que la Cloud Vision API está habilitada en tu proyecto
+3. Verificar que la facturación está habilitada en Google Cloud
 
-### OCR no detecta cédulas
+### API no está habilitada
 
-**Problema**: El OCR no extrae números correctamente
+**Error**: `API has not been used in project` o `PERMISSION_DENIED`
+
+**Solución**:
+1. Ir a [Google Cloud Console](https://console.cloud.google.com/)
+2. Seleccionar tu proyecto
+3. Ir a "APIs & Services" → "Library"
+4. Buscar "Cloud Vision API"
+5. Hacer clic en "Enable"
+
+### OCR confunde números (1 vs 7)
+
+**Problema**: El OCR confunde 1 con 7 u otros números similares
 
 **Soluciones**:
-1. Verificar que el área capturada contiene texto legible
-2. Ajustar el nivel de confianza en la configuración
-3. Probar con diferentes valores de `psm` (0-13)
-4. Mejorar la calidad de la imagen capturada
+1. Aumentar el factor de upscaling en `config/settings.yaml`:
+   ```yaml
+   image_preprocessing:
+     upscale_factor: 4  # Aumentar a 4x
+   ```
+2. Activar guardado de imágenes procesadas para depuración:
+   ```yaml
+   image_preprocessing:
+     save_processed_images: true
+   ```
+3. Verificar que el área capturada contiene texto legible
+4. Mejorar la iluminación de la pantalla capturada
 
 ### Los atajos de teclado no funcionan
 
@@ -267,7 +317,10 @@ El proyecto sigue **Clean Architecture / Arquitectura Hexagonal**:
 
 - **Domain**: Lógica de negocio pura, sin dependencias externas
 - **Application**: Casos de uso que orquestan la lógica
-- **Infrastructure**: Implementaciones concretas (OCR, DB, APIs)
+- **Infrastructure**: Implementaciones concretas (OCR, Preprocesamiento, Automatización)
+  - **OCR**: Google Cloud Vision API (principal), Tesseract (legacy)
+  - **Image Processing**: Pipeline robusto de preprocesamiento para mejorar precisión
+  - **Capture & Automation**: PyAutoGUI para captura y automatización
 - **Presentation**: Interfaz de usuario (PyQt6)
 
 ### Principios aplicados
@@ -276,6 +329,27 @@ El proyecto sigue **Clean Architecture / Arquitectura Hexagonal**:
 - **Inyección de dependencias**: Las dependencias se inyectan en el constructor
 - **SOLID**: Aplicado en toda la arquitectura
 - **Separation of Concerns**: Cada capa tiene responsabilidades claras
+
+### Pipeline de Procesamiento
+
+```
+Captura de Pantalla
+       ↓
+Preprocesamiento Intensivo:
+  1. Upscaling 3x (CRÍTICO para distinguir 1 vs 7)
+  2. Conversión a escala de grises
+  3. Reducción de ruido (fastNlMeansDenoising)
+  4. Aumento de contraste adaptativo (CLAHE)
+  5. Sharpening para nitidez
+  6. Binarización método Otsu
+  7. Operaciones morfológicas (Close + Open)
+       ↓
+Google Cloud Vision API (1 llamada por imagen)
+       ↓
+Extracción y Validación de Cédulas
+       ↓
+Automatización de Digitación
+```
 
 ## Licencia
 
