@@ -248,28 +248,39 @@ class ImageEnhancer:
         return opened
 
     @staticmethod
-    def enhance_edges(image: np.ndarray) -> np.ndarray:
+    def enhance_edges(image: np.ndarray, strength: float = 0.5) -> np.ndarray:
         """
         Realza los bordes de la imagen sin hacer sharpening completo.
 
         Útil para mejorar la distinción entre caracteres similares (3 vs 8).
+        OPTIMIZADO para Google Vision API: realza bordes SIN destruir información.
 
         Args:
             image: Imagen en escala de grises
+            strength: Intensidad del realce (0.0 = sin cambio, 1.0 = solo bordes)
+                     Recomendado: 0.3-0.5 para Google Vision
 
         Returns:
             Imagen con bordes realzados
         """
-        # Detectar bordes con Sobel
+        # Detectar bordes con Sobel (detecta gradientes verticales y horizontales)
         sobelx = cv2.Sobel(image, cv2.CV_64F, 1, 0, ksize=3)
         sobely = cv2.Sobel(image, cv2.CV_64F, 0, 1, ksize=3)
 
-        # Magnitud del gradiente
+        # Magnitud del gradiente (combina ambos)
         edges = np.sqrt(sobelx**2 + sobely**2)
         edges = np.uint8(np.clip(edges, 0, 255))
 
-        # Combinar con imagen original
-        enhanced = cv2.addWeighted(image, 0.7, edges, 0.3, 0)
+        # Normalizar edges para mejor control
+        if edges.max() > 0:
+            edges = cv2.normalize(edges, None, 0, 255, cv2.NORM_MINMAX)
+
+        # Combinar con imagen original usando strength
+        # strength=0.5 → 80% original + 20% bordes (suave)
+        original_weight = 1.0 - (strength * 0.4)  # 0.8 cuando strength=0.5
+        edge_weight = strength * 0.4  # 0.2 cuando strength=0.5
+
+        enhanced = cv2.addWeighted(image, original_weight, edges, edge_weight, 0)
 
         return enhanced
 

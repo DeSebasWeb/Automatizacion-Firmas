@@ -12,7 +12,7 @@ except ImportError:
     GOOGLE_VISION_AVAILABLE = False
     print("ADVERTENCIA: Google Cloud Vision no está instalado. Instalar con: pip install google-cloud-vision")
 
-from ...domain.entities import CedulaRecord
+from ...domain.entities import CedulaRecord, RowData
 from ...domain.ports import OCRPort, ConfigPort
 from ..image import ImagePreprocessor
 
@@ -289,3 +289,263 @@ class GoogleVisionAdapter(OCRPort):
                 seen[record.cedula] = record
 
         return list(seen.values())
+
+    def extract_full_form_data(self, image: Image.Image, expected_rows: int = 15) -> List[RowData]:
+        """
+        Extrae datos completos del formulario manuscrito (nombres + cédulas).
+
+        NUEVO MÉTODO para arquitectura OCR dual:
+        - Extrae NOMBRES manuscritos (columna izquierda)
+        - Extrae CÉDULAS manuscritas (columna centro)
+        - Detecta renglones VACÍOS
+        - Retorna datos estructurados por renglón
+
+        Estrategia:
+        1. Dividir imagen en ~15 renglones horizontales
+        2. Para cada renglón: procesar con Google Vision
+        3. Separar texto por posición horizontal (columna izq vs centro)
+        4. Detectar renglones vacíos (sin texto o confianza baja)
+
+        Args:
+            image: Imagen PIL del formulario manuscrito completo
+            expected_rows: Número esperado de renglones (default: 15)
+
+        Returns:
+            Lista de RowData (uno por renglón)
+        """
+        if self.client is None:
+            print("ERROR: Google Cloud Vision no está inicializado")
+            return []
+
+        print(f"\n{'='*70}")
+        print("EXTRACCIÓN COMPLETA - Nombres + Cédulas (OCR Dual)")
+        print(f"{'='*70}")
+        print(f"Imagen: {image.width}x{image.height} px")
+        print(f"Renglones esperados: {expected_rows}")
+
+        # Dividir imagen en renglones
+        row_images = self._split_image_into_rows(image, expected_rows)
+        print(f"✓ Imagen dividida en {len(row_images)} renglones")
+
+        # Procesar cada renglón
+        all_rows_data = []
+
+        for row_idx, row_image in enumerate(row_images):
+            print(f"\n[Renglón {row_idx + 1}/{expected_rows}]")
+            row_data = self._process_single_row(row_image, row_idx)
+            all_rows_data.append(row_data)
+
+            # Log resultado
+            if row_data.is_empty:
+                print(f"  → Resultado: [VACÍO]")
+            else:
+                print(f"  → Nombres: '{row_data.nombres_manuscritos}'")
+                print(f"  → Cédula: '{row_data.cedula}'")
+                print(f"  → Confianza: nombres={row_data.confidence.get('nombres', 0):.0%}, cédula={row_data.confidence.get('cedula', 0):.0%}")
+
+        print(f"\n{'='*70}")
+        print(f"RESUMEN: {len(all_rows_data)} renglones procesados")
+        vacios = sum(1 for r in all_rows_data if r.is_empty)
+        con_datos = len(all_rows_data) - vacios
+        print(f"  - Con datos: {con_datos}")
+        print(f"  - Vacíos: {vacios}")
+        print(f"  - Total llamadas API: {len(row_images)}")
+        print(f"{'='*70}\n")
+
+        return all_rows_data
+
+    def _split_image_into_rows(self, image: Image.Image, num_rows: int) -> List[Image.Image]:
+        """
+        Divide la imagen en renglones horizontales uniformes.
+
+        Args:
+            image: Imagen completa del formulario
+            num_rows: Número de renglones a crear
+
+        Returns:
+            Lista de sub-imágenes (una por renglón)
+        """
+        height = image.height
+        width = image.width
+        row_height = height // num_rows
+
+        print(f"División: {height}px / {num_rows} renglones = {row_height}px por renglón")
+
+        rows = []
+        for i in range(num_rows):
+            y1 = i * row_height
+            y2 = min((i + 1) * row_height, height)
+
+            if y2 - y1 > 5:  # Altura mínima
+                row = image.crop((0, y1, width, y2))
+                rows.append(row)
+
+        return rows
+
+    def _process_single_row(self, row_image: Image.Image, row_index: int) -> RowData:
+        """
+        Procesa un renglón individual extrayendo nombres y cédula.
+
+        Estrategia de separación por columnas:
+        - Columna izquierda (0-50% del ancho): NOMBRES
+        - Columna centro (50-100% del ancho): CÉDULA
+
+        Args:
+            row_image: Imagen del renglón a procesar
+            row_index: Índice del renglón (0-14)
+
+        Returns:
+            RowData con nombres, cédula, y estado de vacío
+        """
+        try:
+            # Convertir imagen PIL a bytes
+            img_byte_arr = io.BytesIO()
+            row_image.save(img_byte_arr, format='PNG')
+            img_byte_arr = img_byte_arr.getvalue()
+
+            # Crear objeto Image de Google Vision
+            vision_image = vision.Image(content=img_byte_arr)
+
+            # Llamar a la API - DOCUMENT_TEXT_DETECTION
+            response = self.client.document_text_detection(image=vision_image)
+
+            if response.error.message:
+                print(f"  ✗ Error API: {response.error.message}")
+                return self._create_empty_row(row_index)
+
+            # Verificar si hay texto detectado
+            if not response.full_text_annotation or not response.full_text_annotation.text.strip():
+                print(f"  → Sin texto detectado (renglón vacío)")
+                return self._create_empty_row(row_index)
+
+            # Extraer texto completo para debugging
+            full_text = response.full_text_annotation.text.strip()
+            print(f"  → Texto detectado: '{full_text}'")
+
+            # Separar nombres y cédula usando coordenadas de boundingBox
+            nombres, cedula, confidence = self._separate_nombres_cedula(
+                response,
+                row_image.width
+            )
+
+            # Detectar si es renglón vacío basado en umbral de confianza
+            min_confidence = self.config.get('ocr.google_vision.confidence_threshold', 0.30)
+            is_empty = (
+                (not nombres and not cedula) or
+                (confidence.get('nombres', 0) < min_confidence and confidence.get('cedula', 0) < min_confidence) or
+                (len(nombres) < 2 and len(cedula) < 6)  # Muy poco texto
+            )
+
+            return RowData(
+                row_index=row_index,
+                nombres_manuscritos=nombres,
+                cedula=cedula,
+                is_empty=is_empty,
+                confidence=confidence,
+                raw_text=full_text
+            )
+
+        except Exception as e:
+            print(f"  ✗ Error procesando renglón: {e}")
+            return self._create_empty_row(row_index)
+
+    def _separate_nombres_cedula(
+        self,
+        response,
+        image_width: int
+    ) -> tuple[str, str, Dict[str, float]]:
+        """
+        Separa nombres y cédula basándose en posición horizontal del texto.
+
+        Columnas del formulario manuscrito:
+        - Izquierda (0-60% del ancho): NOMBRES
+        - Centro (60-100% del ancho): CÉDULA
+
+        Args:
+            response: Respuesta de Google Vision API
+            image_width: Ancho de la imagen del renglón
+
+        Returns:
+            (nombres, cedula, confidence_dict)
+        """
+        # Límite de columnas (60% del ancho)
+        column_boundary = image_width * 0.6
+
+        nombres_parts = []
+        cedula_parts = []
+        nombres_confidences = []
+        cedula_confidences = []
+
+        # Iterar sobre los bloques/palabras detectadas
+        for page in response.full_text_annotation.pages:
+            for block in page.blocks:
+                for paragraph in block.paragraphs:
+                    # Obtener bounding box del párrafo
+                    vertices = paragraph.bounding_box.vertices
+                    if not vertices:
+                        continue
+
+                    # Calcular posición X promedio
+                    avg_x = sum(v.x for v in vertices) / len(vertices)
+
+                    # Extraer texto del párrafo
+                    paragraph_text = ""
+                    paragraph_confidence = 0.0
+                    word_count = 0
+
+                    for word in paragraph.words:
+                        word_text = ''.join([symbol.text for symbol in word.symbols])
+                        paragraph_text += word_text + " "
+                        paragraph_confidence += word.confidence
+                        word_count += 1
+
+                    paragraph_text = paragraph_text.strip()
+                    if word_count > 0:
+                        paragraph_confidence /= word_count
+
+                    # Clasificar en columna izquierda (nombres) o centro (cédula)
+                    if avg_x < column_boundary:
+                        # Columna izquierda - NOMBRES
+                        nombres_parts.append(paragraph_text)
+                        nombres_confidences.append(paragraph_confidence)
+                    else:
+                        # Columna centro - CÉDULA
+                        cedula_parts.append(paragraph_text)
+                        cedula_confidences.append(paragraph_confidence)
+
+        # Combinar partes
+        nombres = ' '.join(nombres_parts).strip()
+        cedula_raw = ' '.join(cedula_parts).strip()
+
+        # Limpiar cédula (solo números)
+        cedula = ''.join(filter(str.isdigit, cedula_raw))
+
+        # Calcular confianza promedio
+        nombres_conf = sum(nombres_confidences) / len(nombres_confidences) if nombres_confidences else 0.0
+        cedula_conf = sum(cedula_confidences) / len(cedula_confidences) if cedula_confidences else 0.0
+
+        confidence = {
+            'nombres': nombres_conf,
+            'cedula': cedula_conf
+        }
+
+        return nombres, cedula, confidence
+
+    def _create_empty_row(self, row_index: int) -> RowData:
+        """
+        Crea un RowData vacío para renglones sin datos.
+
+        Args:
+            row_index: Índice del renglón
+
+        Returns:
+            RowData marcado como vacío
+        """
+        return RowData(
+            row_index=row_index,
+            nombres_manuscritos="",
+            cedula="",
+            is_empty=True,
+            confidence={},
+            raw_text=None
+        )

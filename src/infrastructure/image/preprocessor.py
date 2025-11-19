@@ -61,28 +61,28 @@ class ImagePreprocessor:
         """
         return {
             'enabled': True,
-            'upscale_factor': 3,  # 3x es suficiente sin degradar
+            'upscale_factor': 4,  # 4x para máxima resolución sin degradar
             'normalize_illumination': {
                 'enabled': False  # Desactivado - puede crear artefactos
             },
             'denoise': {
                 'enabled': True,
-                'h': 8,  # Suave - no destruye detalles
+                'h': 7,  # Moderado - preserva trazos sin adelgazar
                 'template_window_size': 7,
                 'search_window_size': 21
             },
             'contrast': {
                 'enabled': True,
-                'clip_limit': 2.5,  # Moderado
+                'clip_limit': 2.5,  # Moderado - no adelgaza trazos
                 'tile_grid_size': (8, 8)
             },
             'enhance_edges': {
-                'enabled': False  # Desactivado - Google Vision ya detecta bien bordes
+                'enabled': False  # Desactivado - adelgaza trazos
             },
             'sharpen': {
                 'enabled': True,
-                'intensity': 'normal',  # Normal, no agresivo
-                'use_unsharp_mask': False  # Desactivado
+                'intensity': 'normal',  # Normal - no adelgaza trazos
+                'use_unsharp_mask': False  # Desactivado - adelgaza trazos
             },
             'binarize': {
                 'enabled': False,  # CRÍTICO: NO binarizar para Google Vision
@@ -113,8 +113,8 @@ class ImagePreprocessor:
         start_time = time.time()
 
         print("\n" + "="*70)
-        print("PIPELINE DE PREPROCESAMIENTO - GOOGLE VISION API")
-        print("Pipeline CONSERVADOR: preserva información sin destruirla")
+        print("PIPELINE DE PREPROCESAMIENTO - BALANCEADO v3.1")
+        print("Google Vision API - Mejora resolución SIN adelgazar trazos")
         print("="*70)
 
         # Convertir PIL a OpenCV
@@ -173,11 +173,12 @@ class ImagePreprocessor:
         else:
             print("\n[4/11] Aumento de contraste deshabilitado")
 
-        # PASO 5: Realzar bordes (NUEVO - antes de sharpening)
-        if self.config.get('enhance_edges', {}).get('enabled', True):
-            print("\n[5/11] Realzando bordes (Sobel)...")
-            cv_image = self.enhancer.enhance_edges(cv_image)
-            print(f"      ✓ Bordes realzados")
+        # PASO 5: Realzar bordes (OPTIMIZADO - antes de sharpening)
+        if self.config.get('enhance_edges', {}).get('enabled', False):
+            print("\n[5/11] Realzando bordes (Sobel optimizado)...")
+            # strength=0.5 es óptimo: realza sin destruir (80% original + 20% bordes)
+            cv_image = self.enhancer.enhance_edges(cv_image, strength=0.5)
+            print(f"      ✓ Bordes realzados (strength=0.5, suave)")
         else:
             print("\n[5/11] Realce de bordes deshabilitado")
 
@@ -189,11 +190,12 @@ class ImagePreprocessor:
             cv_image = self.enhancer.sharpen(cv_image, intensity=intensity)
             print(f"      ✓ Nitidez aumentada (kernel {intensity})")
 
-            # PASO 6b: Unsharp masking adicional (NUEVO)
-            if sharpen_config.get('use_unsharp_mask', True):
+            # PASO 6b: Unsharp masking adicional (OPTIMIZADO)
+            if sharpen_config.get('use_unsharp_mask', False):
                 print(f"      [6b] Aplicando unsharp masking adicional...")
-                cv_image = self.enhancer.unsharp_mask(cv_image, sigma=1.5, strength=2.0)
-                print(f"      ✓ Unsharp masking aplicado")
+                # strength=1.5 es óptimo para Google Vision (no tan agresivo como 2.0)
+                cv_image = self.enhancer.unsharp_mask(cv_image, sigma=1.5, strength=1.5)
+                print(f"      ✓ Unsharp masking aplicado (strength=1.5)")
         else:
             print("\n[6/11] Sharpening deshabilitado")
 

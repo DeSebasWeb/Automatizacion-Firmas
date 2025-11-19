@@ -1,0 +1,448 @@
+Necesito EVOLUCIONAR la aplicación de asistencia en digitación agregando validación automática inteligente con OCR dual estratégico.
+
+CONTEXTO ACTUAL:
+- Aplicación funcionando con Google Cloud Vision API
+- Arquitectura hexagonal implementada
+- Autenticación: gcloud auth application-default
+- Preprocesamiento de imágenes implementado
+- Actualmente solo extrae cédulas
+
+ARQUITECTURA DE OCR DUAL - ESTRATEGIA CORRECTA:
+
+1. GOOGLE CLOUD VISION API (ya implementado) analiza:
+   - Formulario manuscrito COMPLETO (imagen capturada)
+   - Extrae NOMBRES manuscritos (columna izquierda)
+   - Extrae CÉDULAS manuscritas (columna centro)
+   - Detecta renglones VACÍOS
+   - Procesa ~15 renglones por imagen
+
+2. TESSERACT OCR (NUEVO - gratuito) analiza:
+   - Formulario WEB digital (después de buscar cédula)
+   - Lee campos: "1er Nombre", "2do Nombre", "1er Apellido", "2do Apellido"
+   - Detecta campos VACÍOS (cuando persona no existe en DB)
+   - Texto impreso/digital únicamente
+
+FLUJO COMPLETO AUTOMATIZADO:
+
+1. Usuario captura pantalla del formulario manuscrito
+2. Google Vision extrae datos de TODOS los renglones:
+   {
+     "row_1": {"nombres": "MARIA DE JESUS", "cedula": "20014807"},
+     "row_2": {"nombres": "OMAR", "cedula": "79828861"},
+     "row_3": {"nombres": "", "cedula": ""},  // Renglón vacío
+     ...
+   }
+
+3. Para CADA renglón procesado:
+
+   A) Si renglón está VACÍO:
+      → Click automático en botón "Renglón En Blanco"
+      → Continuar con siguiente renglón
+   
+   B) Si renglón tiene datos:
+      → Digitar cédula en campo de búsqueda
+      → Presionar Enter
+      → Esperar carga de página (max 5 segundos)
+      → Tesseract lee campos del formulario web:
+        * 1er Nombre
+        * 2do Nombre (puede estar vacío)
+        * 1er Apellido
+        * 2do Apellido
+      
+      → VALIDAR con datos de Google Vision:
+      
+      C.1) Si TODOS los campos están VACÍOS:
+           ⚠️ ALERTA: "Cédula no existe en base de datos"
+           → Pausar proceso
+           → Esperar decisión del usuario
+           → Opciones: [Continuar] [Marcar como novedad] [Pausar]
+      
+      C.2) Si campos tienen datos:
+           → Comparar con fuzzy matching:
+             * Primer apellido (OBLIGATORIO >85% match)
+             * Al menos un nombre (>85% match)
+           
+           Si coincide:
+             ✓ Click automático en "Guardar"
+             → Siguiente renglón
+           
+           Si NO coincide:
+             ⚠️ ALERTA: "Validación requerida"
+             → Mostrar comparación:
+               OCR manuscrito: MARIA / BEJARANO
+               Base de datos: OMAR / MAYORGA
+             → Pausar proceso
+             → Esperar decisión del usuario
+
+4. PAUSA CON ESC:
+   - Usuario puede presionar ESC en CUALQUIER momento
+   - Sistema pausa inmediatamente
+   - Guarda estado actual (último renglón procesado)
+   - Usuario puede usar PC normalmente
+   - Reanudar con botón o tecla (ej: F9)
+
+IMPLEMENTACIÓN TÉCNICA:
+
+1. ACTUALIZAR: GoogleVisionAdapter
+
+Modificar: src/infrastructure/ocr/google_vision_adapter.py
+
+Nuevas responsabilidades:
+- Extraer NOMBRES y CÉDULAS (no solo cédulas)
+- Detectar renglones vacíos
+- Retornar datos estructurados por renglón
+
+Método principal:
+extract_full_form_data(image_path) -> List[RowData]
+
+Estructura RowData:
+{
+  "row_index": 0,
+  "nombres_manuscritos": "MARIA DE JESUS BEJARANO JIMENEZ",
+  "cedula": "20014807",
+  "is_empty": False,
+  "confidence": {"nombres": 0.89, "cedula": 0.95}
+}
+
+Para renglón vacío:
+{
+  "row_index": 2,
+  "nombres_manuscritos": "",
+  "cedula": "",
+  "is_empty": True,
+  "confidence": {}
+}
+
+Lógica de detección de renglón vacío:
+- Si Google Vision no detecta texto en la región del renglón
+- O si confianza < 30%
+- O si texto detectado es solo ruido (< 3 caracteres)
+
+2. NUEVO MÓDULO: TesseractWebScraper
+
+Crear: src/infrastructure/ocr/tesseract_web_scraper.py
+
+Responsabilidades:
+- Capturar región del formulario web (campos digitales)
+- Usar Tesseract para leer campos uno por uno
+- Detectar campos vacíos
+- Retornar datos estructurados
+
+Métodos principales:
+- capture_web_form_region() -> image
+- extract_field_value(field_name) -> str
+- get_all_fields() -> FormData
+- is_person_not_found() -> bool
+
+Estructura FormData:
+{
+  "primer_nombre": "OMAR",
+  "segundo_nombre": "",  // Vacío
+  "primer_apellido": "MAYORGA",
+  "segundo_apellido": "ROBLES",
+  "is_empty": False,  // True si TODOS los campos vacíos
+  "extraction_time": "2025-11-17T02:30:00Z"
+}
+
+Configuración Tesseract optimizada para texto digital:
+--psm 6  # Asume un bloque uniforme de texto
+--oem 3  # Modo LSTM
+-c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZÁÉÍÓÚÑ  # Solo letras
+
+3. NUEVO MÓDULO: AutomationController
+
+Crear: src/application/controllers/automation_controller.py
+
+Responsabilidades:
+- Coordinar flujo automático completo
+- Manejar digitación y clicks
+- Gestionar pausas (ESC)
+- Logging detallado de cada acción
+
+Métodos principales:
+- process_all_rows(form_data: List[RowData])
+- process_single_row(row: RowData)
+- handle_empty_row()
+- handle_person_not_found()
+- handle_validation_mismatch()
+- pause_automation()
+- resume_automation()
+
+Estados del sistema:
+- RUNNING: Procesando automáticamente
+- PAUSED_ESC: Usuario presionó ESC
+- PAUSED_ALERT: Esperando validación del usuario
+- PAUSED_ERROR: Error requiere intervención
+- COMPLETED: Todos los renglones procesados
+
+4. NUEVO MÓDULO: FuzzyValidator
+
+Crear: src/application/services/fuzzy_validator.py
+
+Responsabilidades:
+- Comparar nombres manuscritos vs digitales
+- Algoritmo fuzzy matching tolerante a errores
+- Normalización de texto (tildes, mayúsculas, espacios)
+
+Métodos:
+- validate_person(manuscrito_data, digital_data) -> ValidationResult
+- fuzzy_compare(text1, text2) -> float
+- normalize_text(text) -> str
+- extract_nombres_from_full_name(full_name) -> List[str]
+
+Estructura ValidationResult:
+{
+  "status": "OK" | "WARNING" | "ERROR",
+  "action": "AUTO_SAVE" | "REQUIRE_VALIDATION" | "ALERT_NOT_FOUND",
+  "confidence": 0.92,
+  "matches": {
+    "primer_apellido": {"match": True, "similarity": 0.95, "compared": "BEJARANO vs BEJARANO"},
+    "any_nombre": {"match": True, "similarity": 0.88, "compared": "MARIA vs MARIA"}
+  },
+  "details": "Primer apellido y nombre coinciden"
+}
+
+5. NUEVO: Sistema de Pausas con ESC
+
+Implementar listener de teclado global:
+
+Usar librería: pynput
+```python
+from pynput import keyboard
+
+class PauseListener:
+    def __init__(self, automation_controller):
+        self.controller = automation_controller
+        self.listener = keyboard.Listener(on_press=self.on_press)
+    
+    def on_press(self, key):
+        try:
+            if key == keyboard.Key.esc:
+                self.controller.pause_automation()
+            elif key == keyboard.Key.f9:  # Tecla para reanudar
+                self.controller.resume_automation()
+        except AttributeError:
+            pass
+    
+    def start(self):
+        self.listener.start()
+    
+    def stop(self):
+        self.listener.stop()
+```
+
+6. INTERFAZ DE USUARIO ACTUALIZADA
+
+Agregar elementos visuales:
+
+Panel de progreso:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Procesando: Renglón 5 de 15
+Estado: ✓ Validado automáticamente
+Estadísticas:
+
+Validados: 4
+Requerida intervención: 1
+Renglones vacíos: 0
+No encontrados: 0
+
+[ESC] Pausar  [F9] Reanudar
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Alerta de persona no encontrada:
+⚠️ PERSONA NO EXISTE EN BASE DE DATOS
+Cédula digitada: 79828861
+Todos los campos retornaron vacíos
+Opciones:
+[Marcar como Novedad] [Saltar] [Pausar]
+Alerta de validación requerida:
+⚠️ VALIDACIÓN REQUERIDA
+Formulario manuscrito (Google Vision):
+Nombre: MARIA DE JESUS
+Apellido: BEJARANO
+Base de datos (Tesseract):
+Nombre: OMAR
+Apellido: MAYORGA
+Similaridad: 12% ❌
+¿Desea guardar de todos modos?
+[Guardar] [Saltar] [Corregir Manualmente]
+Indicador de renglón vacío:
+ℹ️ Renglón 3: Vacío
+✓ Click automático en "Renglón En Blanco"
+
+7. CONFIGURACIÓN ACTUALIZADA
+
+config.yaml:
+
+ocr:
+  google_vision:
+    enabled: true
+    extract_nombres: true  # NUEVO
+    extract_cedulas: true
+    detect_empty_rows: true
+    confidence_threshold: 0.30  # Para detectar renglones vacíos
+  
+  tesseract:
+    enabled: true
+    target: "web_form_fields"  # Solo campos del formulario web
+    config: "--psm 6 --oem 3"
+    char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZÁÉÍÓÚÑ "
+    
+validation:
+  enabled: true
+  fuzzy_matching: true
+  min_similarity: 0.85
+  required_matches:
+    - "primer_apellido"
+    - "any_nombre"
+  
+  alert_on_not_found: true
+  alert_on_mismatch: true
+
+automation:
+  enabled: true
+  typing_delay_ms: 50
+  click_delay_ms: 300
+  page_load_timeout: 5
+  
+  pause_key: "esc"
+  resume_key: "f9"
+  
+  auto_click_save: true
+  auto_handle_empty_rows: true
+
+empty_row_handling:
+  auto_click_button: true
+  button_name: "Renglón En Blanco"
+  log_empty_rows: true
+
+8. CASOS ESPECIALES A MANEJAR
+
+A) Renglón vacío detectado:
+   → Log: "Renglón 3: Vacío - Click automático"
+   → Click en botón específico
+   → Continuar inmediatamente
+
+B) Persona no encontrada (todos campos vacíos):
+   → Pausar proceso
+   → Log: "Cédula 79828861: No existe en BD"
+   → Mostrar alerta
+   → Esperar decisión usuario
+   → Opciones: continuar, marcar novedad, pausar
+
+C) Segundo nombre vacío (caso normal):
+   → No es error
+   → Continuar validación con otros campos
+   → No alertar al usuario
+
+D) Error de red/timeout:
+   → Reintentar 2 veces
+   → Si falla: pausar y alertar
+   → Log detallado del error
+
+E) Usuario presiona ESC:
+   → Guardar estado actual
+   → Pausar listener de teclado automation
+   → Mostrar: "PAUSADO - Presione F9 para continuar"
+   → Usuario puede usar PC libremente
+
+F) Google Vision no detecta texto:
+   → Marcar como renglón vacío
+   → Continuar con lógica de renglón vacío
+
+9. LOGGING DETALLADO
+
+Cada acción debe loguearse:
+```json
+{
+  "timestamp": "2025-11-17T02:30:00Z",
+  "event": "row_processed",
+  "row_index": 5,
+  "cedula": "79828861",
+  "action_taken": "AUTO_SAVE",
+  "validation_confidence": 0.92,
+  "processing_time_ms": 1850
+}
+
+{
+  "timestamp": "2025-11-17T02:30:05Z",
+  "event": "person_not_found",
+  "row_index": 6,
+  "cedula": "12345678",
+  "action_taken": "ALERT_USER",
+  "user_decision": "SKIP"
+}
+
+{
+  "timestamp": "2025-11-17T02:30:10Z",
+  "event": "empty_row_detected",
+  "row_index": 7,
+  "action_taken": "AUTO_CLICK_EMPTY_ROW_BUTTON"
+}
+
+{
+  "timestamp": "2025-11-17T02:30:15Z",
+  "event": "user_paused",
+  "trigger": "ESC_KEY",
+  "current_row": 8,
+  "rows_pending": 7
+}
+```
+
+10. DEPENDENCIAS NUEVAS
+
+requirements.txt:
+
+pytesseract>=0.3.10
+pynput>=1.7.6              # Para escuchar ESC globalmente
+python-Levenshtein>=0.21.0  # Fuzzy matching rápido
+unidecode>=1.3.7           # Normalización de texto
+
+11. TESTING
+
+Tests requeridos:
+- Extracción de renglones completos (nombres + cédulas)
+- Detección de renglones vacíos
+- Scraping de campos web con Tesseract
+- Detección de persona no encontrada
+- Fuzzy matching con diferentes casos
+- Sistema de pausas ESC/F9
+- Flujo completo end-to-end
+
+12. DOCUMENTACIÓN
+
+Crear/actualizar:
+- docs/DUAL_OCR_ARCHITECTURE.md: Explicar cuándo usar cada OCR
+- docs/AUTOMATION_FLOW.md: Flujo completo paso a paso
+- docs/USER_GUIDE.md: Cómo usar la aplicación (con pausas, alertas, etc)
+- docs/TROUBLESHOOTING.md: Qué hacer cuando aparecen alertas
+- README.md: Actualizar con nueva funcionalidad
+
+PRIORIDADES:
+
+1. (CRÍTICO) Actualizar Google Vision para extraer nombres + cédulas
+2. (CRÍTICO) Implementar Tesseract para leer formulario web
+3. (CRÍTICO) Implementar FuzzyValidator
+4. (ALTO) Implementar AutomationController con flujo completo
+5. (ALTO) Sistema de pausas con ESC
+6. (MEDIO) UI para alertas y validaciones
+7. (MEDIO) Manejo de renglones vacíos
+8. (BAJO) Estadísticas y métricas
+
+MÉTRICAS DE ÉXITO:
+
+- 85%+ de renglones validados automáticamente
+- 0% de guardados incorrectos (falsos positivos)
+- <5 segundos por renglón en promedio
+- 100% de renglones vacíos detectados correctamente
+- 100% de personas no encontradas detectadas
+
+NOTAS FINALES:
+
+- Google Vision procesa formulario COMPLETO manuscrito
+- Tesseract solo lee formulario WEB digital
+- Sistema debe ser robusto ante errores
+- Usuario siempre tiene control (ESC)
+- Logging exhaustivo para debugging
+- Mantener arquitectura hexagonal
+
+Por favor, implementa esta funcionalidad completa con la arquitectura correcta de OCR dual.

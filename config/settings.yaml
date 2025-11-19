@@ -3,10 +3,10 @@ automation:
   pre_enter_delay: 0.3
   typing_interval: 0.05
 capture_area:
-  height: 474
-  width: 383
-  x: 922
-  y: 434
+  height: 473
+  width: 354
+  x: 927
+  y: 462
 hotkeys:
   capture_area: f4
   next_record: ctrl+q
@@ -23,7 +23,7 @@ image_preprocessing:
     - 8
   denoise:
     enabled: true
-    h: 8
+    h: 7
     search_window_size: 21
     template_window_size: 7
   deskew:
@@ -40,12 +40,12 @@ image_preprocessing:
   normalize_illumination:
     enabled: false
   output_dir: temp/processed
-  save_processed_images: false
+  save_processed_images: true
   sharpen:
     enabled: true
     intensity: normal
     use_unsharp_mask: false
-  upscale_factor: 3
+  upscale_factor: 4
 ocr:
   google_vision:
     authentication: application_default
