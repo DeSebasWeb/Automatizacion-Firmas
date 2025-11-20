@@ -85,6 +85,8 @@ class MainController(QObject):
         self.window.next_record_requested.connect(self.handle_next_record_from_button)
         self.window.pause_requested.connect(self.handle_pause)
         self.window.resume_requested.connect(self.handle_resume)
+        # NUEVO: OCR Dual
+        self.window.ocr_dual_processing_requested.connect(self.handle_ocr_dual_processing)
 
     def _register_hotkeys(self):
         """Registra los atajos de teclado globales."""
@@ -227,6 +229,9 @@ class MainController(QObject):
             self.window.setWindowOpacity(1.0)
             self.window.set_preview_image(self.current_image)
             self.window.add_log("Captura completada", "INFO")
+
+            # Habilitar botón OCR dual
+            self.window.btn_ocr_dual.setEnabled(True)
 
             self.logger.info(
                 "Captura exitosa",
@@ -452,3 +457,85 @@ class MainController(QObject):
             self.logger.info("Sesión creada con registros extraídos", total=len(records))
         except Exception as e:
             self.logger.error("Error al crear sesión", error=str(e))
+
+    def handle_ocr_dual_processing(self):
+        """Maneja procesamiento OCR dual automático."""
+        if not self.current_image:
+            self.window.add_log("⚠️ Primero capture una imagen del formulario manuscrito", "WARNING")
+            return
+
+        try:
+            # Cargar configuración
+            import yaml
+            with open('config/settings.yaml', 'r', encoding='utf-8') as f:
+                config = yaml.safe_load(f)
+
+            # Crear componentes si no existen
+            if not hasattr(self, 'automation_controller'):
+                from ...application.controllers import AutomationController
+                from ...infrastructure.ocr.google_vision_adapter import GoogleVisionAdapter
+                from ...infrastructure.ocr.tesseract_web_scraper import TesseractWebScraper
+                from .ocr_dual_controller import OCRDualController
+
+                self.logger.info("Inicializando componentes OCR dual")
+                self.window.add_log("🔧 Inicializando sistema OCR dual...", "INFO")
+
+                # Crear adaptadores
+                self.google_vision_dual = GoogleVisionAdapter(
+                    config=config.get('ocr', {}).get('google_vision', {})
+                )
+                self.tesseract = TesseractWebScraper(
+                    config=config.get('ocr', {}).get('tesseract', {})
+                )
+
+                # Crear AutomationController
+                self.automation_controller = AutomationController(
+                    config=config,
+                    on_alert=None,
+                    on_progress=None
+                )
+
+                # Crear OCRDualController
+                self.ocr_dual_controller = OCRDualController(
+                    automation_controller=self.automation_controller,
+                    progress_panel=self.window.progress_panel,
+                    logger=self.logger
+                )
+
+                self.window.add_log("✅ Sistema OCR dual inicializado", "INFO")
+
+            # Mostrar panel de progreso
+            self.window.progress_panel.show()
+            self.window.progress_panel.reset_stats()
+
+            # Iniciar procesamiento
+            self.logger.info("Iniciando procesamiento OCR dual")
+            self.window.add_log("🚀 Iniciando procesamiento OCR dual automático...", "INFO")
+            self.window.add_log("ℹ️ Presiona ESC para pausar, F9 para reanudar", "INFO")
+
+            # Deshabilitar botón mientras procesa
+            self.window.btn_ocr_dual.setEnabled(False)
+
+            # Ejecutar procesamiento en un timer para no bloquear UI
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(500, lambda: self._execute_ocr_dual())
+
+        except Exception as e:
+            self.logger.error("Error en procesamiento OCR dual", error=str(e))
+            self.window.add_log(f"❌ Error: {str(e)}", "ERROR")
+            import traceback
+            traceback.print_exc()
+
+    def _execute_ocr_dual(self):
+        """Ejecuta el procesamiento OCR dual."""
+        try:
+            self.ocr_dual_controller.start_processing(self.current_image)
+        except Exception as e:
+            self.logger.error("Error ejecutando OCR dual", error=str(e))
+            self.window.add_log(f"❌ Error en procesamiento: {str(e)}", "ERROR")
+            import traceback
+            traceback.print_exc()
+        finally:
+            # Rehabilitar botón
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(1000, lambda: self.window.btn_ocr_dual.setEnabled(True))

@@ -11,6 +11,7 @@ from PIL import Image
 from typing import Optional, List
 
 from ...domain.entities import CedulaRecord, ProcessingSession, SessionStatus
+from .progress_panel import ProgressPanel
 
 
 class MainWindow(QMainWindow):
@@ -34,6 +35,7 @@ class MainWindow(QMainWindow):
     next_record_requested = pyqtSignal()
     pause_requested = pyqtSignal()
     resume_requested = pyqtSignal()
+    ocr_dual_processing_requested = pyqtSignal()  # NUEVO: OCR Dual
 
     def __init__(self):
         """Inicializa la ventana principal."""
@@ -66,6 +68,11 @@ class MainWindow(QMainWindow):
 
         # Sección de control
         main_layout.addWidget(self._create_control_section())
+
+        # NUEVO: Panel de progreso OCR Dual
+        self.progress_panel = ProgressPanel()
+        self.progress_panel.hide()  # Oculto por defecto, se muestra al iniciar OCR dual
+        main_layout.addWidget(self.progress_panel)
 
         # Sección de logs
         main_layout.addWidget(self._create_log_section())
@@ -165,9 +172,21 @@ class MainWindow(QMainWindow):
         self.btn_pause.clicked.connect(self._toggle_pause)
         self.btn_pause.setEnabled(False)
 
+        # NUEVO: Botón OCR Dual
+        self.btn_ocr_dual = QPushButton("🚀 OCR Dual Automático")
+        self.btn_ocr_dual.clicked.connect(self.ocr_dual_processing_requested.emit)
+        self.btn_ocr_dual.setEnabled(False)
+        self.btn_ocr_dual.setStyleSheet(
+            "QPushButton { background-color: #9c27b0; color: white; font-weight: bold; padding: 10px; }"
+            "QPushButton:hover { background-color: #7b1fa2; }"
+            "QPushButton:disabled { background-color: #ccc; }"
+        )
+        self.btn_ocr_dual.setToolTip("Procesamiento automático con validación inteligente (ESC para pausar)")
+
         btn_layout.addWidget(self.btn_start)
         btn_layout.addWidget(self.btn_next)
         btn_layout.addWidget(self.btn_pause)
+        btn_layout.addWidget(self.btn_ocr_dual)
 
         # Información de progreso
         info_layout = QHBoxLayout()

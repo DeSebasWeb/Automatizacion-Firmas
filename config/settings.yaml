@@ -3,10 +3,10 @@ automation:
   pre_enter_delay: 0.3
   typing_interval: 0.05
 capture_area:
-  height: 473
-  width: 354
-  x: 927
-  y: 462
+  height: 515
+  width: 339
+  x: 1163
+  y: 422
 hotkeys:
   capture_area: f4
   next_record: ctrl+q
@@ -57,6 +57,28 @@ ocr:
   paddle_lang: es
   provider: google_vision
   psm: 6
+  tesseract:
+    field_regions:
+      primer_apellido:
+        height: 104
+        width: 557
+        x: 43
+        y: 259
+      primer_nombre:
+        height: 109
+        width: 556
+        x: 46
+        y: 22
+      segundo_apellido:
+        height: 99
+        width: 554
+        x: 45
+        y: 376
+      segundo_nombre:
+        height: 112
+        width: 561
+        x: 42
+        y: 139
 search_field:
   x: null
   y: null
