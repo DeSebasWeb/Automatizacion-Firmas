@@ -160,10 +160,16 @@ class GoogleVisionAdapter(OCRPort):
             # Crear objeto Image de Google Vision
             vision_image = vision.Image(content=img_byte_arr)
 
+            # OPTIMIZACIÓN: Language hints para mejorar precisión en español
+            image_context = vision.ImageContext(language_hints=['es'])
+
             # Llamar a la API - DOCUMENT_TEXT_DETECTION detecta texto línea por línea
             # Esta es la ÚNICA llamada API que hacemos
-            print("DEBUG Google Vision: Llamando a DOCUMENT_TEXT_DETECTION...")
-            response = self.client.document_text_detection(image=vision_image)
+            print("DEBUG Google Vision: Llamando a DOCUMENT_TEXT_DETECTION (es)...")
+            response = self.client.document_text_detection(
+                image=vision_image,
+                image_context=image_context
+            )
 
             if response.error.message:
                 print(f"ERROR Google Vision API: {response.error.message}")
@@ -406,8 +412,14 @@ class GoogleVisionAdapter(OCRPort):
             # Crear objeto Image de Google Vision
             vision_image = vision.Image(content=img_byte_arr)
 
+            # OPTIMIZACIÓN: Language hints para mejorar precisión en español
+            image_context = vision.ImageContext(language_hints=['es'])
+
             # Llamar a la API - DOCUMENT_TEXT_DETECTION
-            response = self.client.document_text_detection(image=vision_image)
+            response = self.client.document_text_detection(
+                image=vision_image,
+                image_context=image_context
+            )
 
             if response.error.message:
                 print(f"  ✗ Error API: {response.error.message}")
@@ -517,8 +529,8 @@ class GoogleVisionAdapter(OCRPort):
         nombres = ' '.join(nombres_parts).strip()
         cedula_raw = ' '.join(cedula_parts).strip()
 
-        # Limpiar cédula (solo números)
-        cedula = ''.join(filter(str.isdigit, cedula_raw))
+        # OPTIMIZACIÓN: Corregir errores comunes de OCR antes de limpiar
+        cedula = self._corregir_errores_ocr_cedula(cedula_raw)
 
         # Calcular confianza promedio
         nombres_conf = sum(nombres_confidences) / len(nombres_confidences) if nombres_confidences else 0.0
@@ -530,6 +542,66 @@ class GoogleVisionAdapter(OCRPort):
         }
 
         return nombres, cedula, confidence
+
+    def _corregir_errores_ocr_cedula(self, cedula: str) -> str:
+        """
+        Corrige errores comunes de OCR en cédulas manuscritas.
+
+        OPTIMIZACIÓN CRÍTICA del prompt.txt:
+        Aplica matriz de confusión para errores típicos en escritura manual.
+
+        Correcciones implementadas:
+        - l, I, | → 1 (confusión con número 1)
+        - O, o → 0 (confusión con cero)
+        - S, s → 5 (confusión con 5)
+        - B → 8 (confusión con 8)
+        - Z, z → 2 (confusión con 2)
+        - G → 6 (confusión con 6)
+
+        Args:
+            cedula: String de cédula potencialmente con errores
+
+        Returns:
+            Cédula corregida con solo dígitos numéricos
+
+        Example:
+            "lO23456" → "1023456"
+            "B765432I" → "87654321"
+        """
+        if not cedula:
+            return cedula
+
+        # Matriz de corrección de errores comunes
+        COMMON_ERRORS = {
+            'l': '1', 'I': '1', '|': '1',  # Confusión con 1
+            'O': '0', 'o': '0',             # Confusión con 0
+            'S': '5', 's': '5',             # Confusión con 5
+            'B': '8',                        # Confusión con 8
+            'Z': '2', 'z': '2',             # Confusión con 2
+            'G': '6',                        # Confusión con 6
+        }
+
+        # Aplicar correcciones carácter por carácter
+        cedula_corregida = ""
+        correcciones_aplicadas = []
+
+        for char in cedula:
+            if char in COMMON_ERRORS:
+                char_corregido = COMMON_ERRORS[char]
+                cedula_corregida += char_corregido
+                correcciones_aplicadas.append(f"{char}→{char_corregido}")
+            else:
+                cedula_corregida += char
+
+        # Log correcciones si se aplicaron
+        if correcciones_aplicadas:
+            print(f"  🔧 Correcciones OCR aplicadas: {', '.join(correcciones_aplicadas)}")
+            print(f"     Antes: '{cedula}' → Después: '{cedula_corregida}'")
+
+        # Filtrar solo dígitos numéricos
+        cedula_final = ''.join(filter(str.isdigit, cedula_corregida))
+
+        return cedula_final
 
     def _create_empty_row(self, row_index: int) -> RowData:
         """

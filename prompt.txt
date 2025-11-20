@@ -120,3 +120,105 @@ Implementar reglas:
 Antes de validación final, filtrar palabras que podrían ser cédulas.
 
 Implementar:
+
+
+config.yaml:
+```yaml
+google_vision:
+  enabled: true
+  authentication: "application_default"
+  
+  features:
+    use_document_text_detection: true  # CRÍTICO
+    use_language_hints: true
+    language: "es"
+  
+  extraction:
+    min_confidence: 0.85
+    use_bounding_boxes: true
+    cedula_column_range: [0.40, 0.60]  # 40%-60% del ancho
+  
+  post_processing:
+    enable_error_correction: true
+    enable_contextual_validation: true
+    
+  quality_check:
+    enabled: true
+    reject_low_quality: true
+  
+  batch_processing:
+    enabled: true
+    max_batch_size: 16
+  
+  logging:
+    log_confidence_scores: true
+    log_corrections: true
+    save_low_confidence_samples: true
+    output_dir: "logs/vision_extractions"
+```
+
+TESTING Y MEDICIÓN:
+
+Crear tests para medir precisión real:
+```python
+def test_precision_on_sample(sample_size=500):
+    """
+    Procesa muestra de 500 hojas y mide precisión
+    """
+    results = {
+        "total": 0,
+        "correct": 0,
+        "incorrect": 0,
+        "low_confidence": 0,
+        "avg_confidence": 0
+    }
+    
+    # Procesar muestra
+    # Comparar con ground truth
+    # Calcular métricas
+    
+    precision = results["correct"] / results["total"]
+    print(f"Precisión: {precision * 100:.2f}%")
+    
+    return results
+```
+
+DOCUMENTACIÓN:
+
+Crear: docs/VISION_API_OPTIMIZATION.md
+
+Debe incluir:
+- Explicación de cada optimización implementada
+- Por qué cada una mejora la precisión
+- Configuraciones utilizadas
+- Resultados de pruebas (antes vs después)
+- Análisis de casos donde falla
+- Recomendación final: ¿es suficiente o necesitamos Document AI Custom?
+
+MÉTRICAS DE ÉXITO:
+
+Al final de la implementación, debes tener:
+
+- Precisión >= 90%: ✅ Suficiente, no necesitas Document AI Custom
+- Precisión 85-90%: 🤔 Decisión de negocio (costo vs beneficio)
+- Precisión < 85%: ❌ Considera Document AI Custom
+
+ENTREGABLES:
+
+1. OptimizedVisionAdapter implementado con TODAS las optimizaciones
+2. Sistema de testing para medir precisión en muestra
+3. Dashboard de estadísticas (confianza, errores comunes, etc.)
+4. Documentación completa
+5. Reporte final con recomendación: ¿invertir en Document AI Custom o no?
+
+PRIORIDADES:
+
+1. (CRÍTICO) Migrar a DOCUMENT_TEXT_DETECTION
+2. (CRÍTICO) Implementar filtrado por bounding boxes
+3. (CRÍTICO) Post-procesamiento con corrección de errores
+4. (ALTO) Sistema de medición de precisión
+5. (MEDIO) Batch processing
+6. (MEDIO) Pre-análisis de calidad
+7. (BAJO) Optimizaciones adicionales
+
+Por favor, implementa todas estas optimizaciones y genera un reporte final con la precisión alcanzada y recomendación sobre si es necesario invertir en Document AI Custom.
