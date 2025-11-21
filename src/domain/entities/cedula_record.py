@@ -4,6 +4,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
+from ..value_objects import CedulaNumber, ConfidenceScore
+
 
 class RecordStatus(Enum):
     """Estados posibles de un registro de cédula."""
@@ -40,8 +42,8 @@ class CedulaRecord:
     Ver docs/mejoraSOLID/01_CEDULA_RECORD_VS_ROW_DATA.md para detalles.
 
     Attributes:
-        cedula: Número de cédula extraído
-        confidence: Nivel de confianza del OCR (0-100)
+        cedula: Número de cédula extraído (Value Object)
+        confidence: Nivel de confianza del OCR (Value Object 0.0-1.0)
         status: Estado actual del registro (PENDING, PROCESSING, etc.)
         index: Posición en la lista de registros
         created_at: Timestamp de creación
@@ -50,13 +52,17 @@ class CedulaRecord:
 
     Example:
         >>> # Sistema legacy simple
-        >>> record = CedulaRecord(cedula="12345678", confidence=92.5)
+        >>> from domain.value_objects import CedulaNumber, ConfidenceScore
+        >>> record = CedulaRecord(
+        ...     cedula=CedulaNumber("12345678"),
+        ...     confidence=ConfidenceScore.from_percentage(92.5)
+        ... )
         >>> if record.is_valid():
-        ...     automation.type_cedula(record.cedula)
+        ...     automation.type_cedula(record.cedula.value)
         ...     record.mark_as_completed()
     """
-    cedula: str
-    confidence: float
+    cedula: CedulaNumber
+    confidence: ConfidenceScore
     status: RecordStatus = RecordStatus.PENDING
     index: int = 0
     created_at: datetime = None
@@ -67,6 +73,71 @@ class CedulaRecord:
         """Inicializa valores por defecto."""
         if self.created_at is None:
             self.created_at = datetime.now()
+
+    @classmethod
+    def from_primitives(
+        cls,
+        cedula: str,
+        confidence: float,
+        status: RecordStatus = RecordStatus.PENDING,
+        index: int = 0,
+        created_at: datetime = None,
+        processed_at: Optional[datetime] = None,
+        error_message: Optional[str] = None
+    ) -> 'CedulaRecord':
+        """
+        Factory method para crear CedulaRecord desde tipos primitivos.
+
+        Este método facilita la migración de código legacy y la creación
+        desde la capa de infraestructura que trabaja con primitivos.
+
+        Args:
+            cedula: Número de cédula como string
+            confidence: Confianza como porcentaje (0-100) o decimal (0.0-1.0)
+            status: Estado del registro
+            index: Posición en la lista
+            created_at: Timestamp de creación
+            processed_at: Timestamp de procesamiento
+            error_message: Mensaje de error
+
+        Returns:
+            CedulaRecord con Value Objects
+
+        Example:
+            >>> # Migración de código legacy
+            >>> record = CedulaRecord.from_primitives(
+            ...     cedula="12345678",
+            ...     confidence=92.5  # Acepta porcentaje
+            ... )
+            >>> print(record.cedula.value)
+            12345678
+            >>> print(record.confidence.as_percentage())
+            92.5
+
+        Note:
+            Este método auto-detecta si confidence es porcentaje (>1.0)
+            o decimal (0.0-1.0) y convierte apropiadamente.
+        """
+        # Crear CedulaNumber (con validación automática)
+        cedula_vo = CedulaNumber(cedula)
+
+        # Crear ConfidenceScore (auto-detecta formato)
+        if confidence > 1.0:
+            # Es porcentaje (0-100)
+            confidence_vo = ConfidenceScore.from_percentage(confidence)
+        else:
+            # Es decimal (0.0-1.0)
+            confidence_vo = ConfidenceScore(confidence)
+
+        return cls(
+            cedula=cedula_vo,
+            confidence=confidence_vo,
+            status=status,
+            index=index,
+            created_at=created_at,
+            processed_at=processed_at,
+            error_message=error_message
+        )
 
     def mark_as_processing(self) -> None:
         """Marca el registro como en procesamiento."""

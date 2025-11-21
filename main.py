@@ -1,6 +1,11 @@
 """Punto de entrada principal de la aplicación."""
 import sys
+import os
+from dotenv import load_dotenv
 from PyQt6.QtWidgets import QApplication
+
+# Cargar variables de entorno desde .env
+load_dotenv()
 
 from src.presentation.ui import MainWindow
 from src.presentation.controllers import MainController
@@ -11,6 +16,7 @@ from src.application.use_cases import (
     ManageSessionUseCase
 )
 from src.infrastructure import ocr as ocr_module
+from src.infrastructure.ocr import create_ocr_adapter
 from src.infrastructure.capture import PyAutoGUICapture
 from src.infrastructure.automation import PyAutoGUIAutomation
 from src.shared.config import YAMLConfig
@@ -55,63 +61,12 @@ def main():
     config = YAMLConfig("config/settings.yaml")
     logger = StructuredLogger("app", log_dir="logs")
 
-    # Adaptadores de infraestructura - Usar Google Cloud Vision (lo mejor para escritura manual)
-    print("\n" + "="*60)
-    print("Inicializando motor de OCR...")
-    print("="*60)
+    # Adaptadores de infraestructura - Usar OCR Factory
+    # El factory selecciona automáticamente el proveedor configurado en .env o settings.yaml
+    # Proveedores soportados: google_vision, azure_vision, ensemble, tesseract
+    ocr_service = create_ocr_adapter(config)
 
-    ocr_service = None
-
-    # Intentar Google Cloud Vision primero (MEJOR OPCIÓN para escritura manual)
-    try:
-        print("→ Intentando usar Google Cloud Vision (Óptimo para manuscritos)...")
-        from src.infrastructure.ocr.google_vision_adapter import GoogleVisionAdapter
-        ocr_service = GoogleVisionAdapter(config)
-        print("✓ Google Cloud Vision inicializado correctamente")
-        print("💰 1,000 imágenes gratis/mes = 15,000 cédulas gratis/mes")
-        print("="*60 + "\n")
-    except ImportError as e:
-        print(f"✗ Google Cloud Vision no está instalado: {e}")
-    except Exception as e:
-        print(f"✗ Error al inicializar Google Cloud Vision: {e}")
-        print("   Asegúrate de configurar GOOGLE_APPLICATION_CREDENTIALS")
-
-    # Fallback a TrOCR
-    if ocr_service is None:
-        try:
-            print("\n→ Intentando usar TrOCR (Microsoft - Estado del arte para manuscritos)...")
-            from src.infrastructure.ocr.trocr_adapter import TrOCRAdapter
-            ocr_service = TrOCRAdapter(config)
-            print("✓ TrOCR inicializado correctamente")
-            print("="*60 + "\n")
-        except ImportError as e:
-            print(f"✗ TrOCR no está instalado: {e}")
-        except Exception as e:
-            print(f"✗ Error al inicializar TrOCR: {e}")
-
-    # Fallback a PaddleOCR
-    if ocr_service is None:
-        try:
-            print("\n→ Intentando usar PaddleOCR (alternativa para escritura manual)...")
-            from src.infrastructure.ocr.paddleocr_adapter import PaddleOCRAdapter
-            ocr_service = PaddleOCRAdapter(config)
-            print("✓ PaddleOCR inicializado correctamente")
-            print("="*60 + "\n")
-        except Exception as e:
-            print(f"✗ PaddleOCR no disponible: {e}")
-
-    # Fallback a Tesseract (no óptimo para escritura manual)
-    if ocr_service is None:
-        try:
-            print("\n→ Usando Tesseract OCR (limitado para escritura manual)...")
-            ocr_service = ocr_module.TesseractOCR(config)
-            print("✓ Tesseract OCR inicializado")
-            print("⚠ ADVERTENCIA: Tesseract no es óptimo para escritura manual")
-            print("="*60 + "\n")
-        except Exception as e:
-            print(f"✗ Tesseract no disponible: {e}")
-
-    # Fallback final: Entrada manual
+    # Fallback final: Entrada manual (solo si ningún proveedor OCR está disponible)
     if ocr_service is None:
         print("\n" + "="*60)
         print("⚠ MODO MANUAL ACTIVADO")

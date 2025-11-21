@@ -54,14 +54,14 @@ class ProcessCedulaUseCase:
         if not record.is_valid():
             self.logger.error(
                 "Intento de procesar registro inválido",
-                cedula=record.cedula,
-                confidence=record.confidence
+                cedula=record.cedula.value,
+                confidence=record.confidence.as_percentage()
             )
             raise ValueError("El registro de cédula no es válido")
 
         self.logger.info(
             "Iniciando procesamiento de cédula",
-            cedula=record.cedula,
+            cedula=record.cedula.value,
             index=record.index
         )
 
@@ -105,10 +105,10 @@ class ProcessCedulaUseCase:
             # Digitar la cédula
             self.logger.debug(
                 "Digitando cédula",
-                cedula=record.cedula,
+                cedula=record.cedula.value,
                 interval=typing_interval
             )
-            self.automation.type_text(record.cedula, interval=typing_interval)
+            self.automation.type_text(record.cedula.value, interval=typing_interval)
 
             # Esperar antes de presionar Enter
             pre_enter_delay = self.config.get('automation.pre_enter_delay', 0.3)
@@ -127,7 +127,7 @@ class ProcessCedulaUseCase:
 
             self.logger.info(
                 "Cédula procesada exitosamente",
-                cedula=record.cedula,
+                cedula=record.cedula.value,
                 index=record.index,
                 processing_time=record.processed_at - record.created_at if record.processed_at else None
             )
@@ -140,7 +140,7 @@ class ProcessCedulaUseCase:
 
             self.logger.error(
                 "Error al procesar cédula",
-                cedula=record.cedula,
+                cedula=record.cedula.value,
                 error=str(e)
             )
 

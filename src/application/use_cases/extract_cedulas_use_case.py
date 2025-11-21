@@ -77,8 +77,8 @@ class ExtractCedulasUseCase:
             for record in valid_records:
                 self.logger.debug(
                     "Cédula extraída",
-                    cedula=record.cedula,
-                    confidence=record.confidence,
+                    cedula=record.cedula.value,
+                    confidence=record.confidence.as_percentage(),
                     index=record.index
                 )
 

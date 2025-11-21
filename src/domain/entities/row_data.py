@@ -2,6 +2,8 @@
 from dataclasses import dataclass
 from typing import Dict, Optional
 
+from ..value_objects import CedulaNumber, ConfidenceScore
+
 
 @dataclass
 class RowData:
@@ -65,32 +67,32 @@ class RowData:
     nombres_manuscritos: str
     """Nombres completos manuscritos (columna izquierda)"""
 
-    cedula: str
-    """Número de cédula manuscrito (columna centro)"""
+    cedula: CedulaNumber
+    """Número de cédula manuscrito (Value Object)"""
 
     is_empty: bool
     """True si el renglón está completamente vacío"""
 
-    confidence: Dict[str, float]
-    """Confianza del OCR para cada campo: {'nombres': 0.89, 'cedula': 0.95}"""
+    confidence: Dict[str, ConfidenceScore]
+    """Confianza del OCR para cada campo: {'nombres': ConfidenceScore(0.89), 'cedula': ConfidenceScore(0.95)}"""
 
     raw_text: Optional[str] = None
     """Texto crudo detectado por Google Vision (para debugging)"""
 
     def __post_init__(self):
         """Normaliza los datos después de inicialización."""
-        # Limpiar espacios
+        # Limpiar espacios en nombres
         self.nombres_manuscritos = self.nombres_manuscritos.strip()
-        self.cedula = self.cedula.strip()
 
         # Marcar como vacío si no tiene datos
-        if not self.nombres_manuscritos and not self.cedula:
+        # CedulaNumber.value está pre-validado y limpio
+        if not self.nombres_manuscritos and not self.cedula.value:
             self.is_empty = True
 
     @property
     def has_cedula(self) -> bool:
         """Verifica si el renglón tiene cédula."""
-        return bool(self.cedula and len(self.cedula) >= 6)
+        return bool(self.cedula.value and len(self.cedula.value) >= 3)
 
     @property
     def has_nombres(self) -> bool:
@@ -102,9 +104,12 @@ class RowData:
         return {
             'row_index': self.row_index,
             'nombres_manuscritos': self.nombres_manuscritos,
-            'cedula': self.cedula,
+            'cedula': self.cedula.value,
             'is_empty': self.is_empty,
-            'confidence': self.confidence,
+            'confidence': {
+                key: score.as_percentage()
+                for key, score in self.confidence.items()
+            },
             'raw_text': self.raw_text
         }
 
@@ -112,4 +117,67 @@ class RowData:
         """Representación en string."""
         if self.is_empty:
             return f"Renglón {self.row_index}: [VACÍO]"
-        return f"Renglón {self.row_index}: {self.nombres_manuscritos} - {self.cedula}"
+        return f"Renglón {self.row_index}: {self.nombres_manuscritos} - {self.cedula.value}"
+
+    @classmethod
+    def from_primitives(
+        cls,
+        row_index: int,
+        nombres_manuscritos: str,
+        cedula: str,
+        is_empty: bool,
+        confidence: Dict[str, float],
+        raw_text: Optional[str] = None
+    ) -> 'RowData':
+        """
+        Factory method para crear RowData desde tipos primitivos.
+
+        Este método facilita la migración de código legacy y la creación
+        desde la capa de infraestructura que trabaja con primitivos.
+
+        Args:
+            row_index: Índice del renglón
+            nombres_manuscritos: Nombres como string
+            cedula: Cédula como string
+            is_empty: Si el renglón está vacío
+            confidence: Dict con confianzas como floats (0.0-1.0 o 0-100)
+            raw_text: Texto crudo opcional
+
+        Returns:
+            RowData con Value Objects
+
+        Example:
+            >>> row = RowData.from_primitives(
+            ...     row_index=0,
+            ...     nombres_manuscritos="JUAN PEREZ",
+            ...     cedula="12345678",
+            ...     is_empty=False,
+            ...     confidence={'nombres': 0.89, 'cedula': 0.95}
+            ... )
+
+        Note:
+            - Auto-detecta si confidence values son porcentajes (>1.0) o decimales (0.0-1.0)
+            - CedulaNumber valida automáticamente el formato de la cédula
+        """
+        # Crear CedulaNumber (con validación automática)
+        # Si la cédula está vacía, usar un valor por defecto que pase validación
+        cedula_vo = CedulaNumber(cedula) if cedula.strip() else CedulaNumber("000000")
+
+        # Convertir confidence dict a ConfidenceScore
+        confidence_vo = {}
+        for key, value in confidence.items():
+            if value > 1.0:
+                # Es porcentaje (0-100)
+                confidence_vo[key] = ConfidenceScore.from_percentage(value)
+            else:
+                # Es decimal (0.0-1.0)
+                confidence_vo[key] = ConfidenceScore(value)
+
+        return cls(
+            row_index=row_index,
+            nombres_manuscritos=nombres_manuscritos,
+            cedula=cedula_vo,
+            is_empty=is_empty,
+            confidence=confidence_vo,
+            raw_text=raw_text
+        )

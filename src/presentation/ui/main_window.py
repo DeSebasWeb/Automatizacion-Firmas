@@ -340,7 +340,7 @@ class MainWindow(QMainWindow):
         self.list_cedulas.clear()
 
         for record in records:
-            item_text = f"{record.cedula} (Confianza: {record.confidence:.1f}%)"
+            item_text = f"{record.cedula.value} (Confianza: {record.confidence:.1f}%)"
             item = QListWidgetItem(item_text)
             self.list_cedulas.addItem(item)
 
@@ -361,7 +361,7 @@ class MainWindow(QMainWindow):
             current_record = session.get_current_record()
             if current_record:
                 self.list_cedulas.setCurrentRow(current_record.index)
-                self.lbl_current.setText(f"Registro actual: {current_record.cedula}")
+                self.lbl_current.setText(f"Registro actual: {current_record.cedula.value}")
 
         elif session.status == SessionStatus.PAUSED:
             self.btn_pause.setText("Reanudar (F3)")

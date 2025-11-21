@@ -385,8 +385,8 @@ class MainController(QObject):
                 self._processing_next_record = False
                 return
 
-            self.logger.info("Procesando registro", cedula=record.cedula, index=record.index)
-            self.window.add_log(f"🔄 Procesando cédula {record.index + 1}/{session.total_records}: {record.cedula}", "INFO")
+            self.logger.info("Procesando registro", cedula=record.cedula.value, index=record.index)
+            self.window.add_log(f"🔄 Procesando cédula {record.index + 1}/{session.total_records}: {record.cedula.value}", "INFO")
 
             # Mostrar mensaje solo si se va a hacer Alt+Tab
             if do_alt_tab:
@@ -397,12 +397,12 @@ class MainController(QObject):
 
             if success:
                 self.window.add_log(
-                    f"Cédula {record.cedula} procesada correctamente",
+                    f"Cédula {record.cedula.value} procesada correctamente",
                     "INFO"
                 )
             else:
                 self.window.add_log(
-                    f"Error al procesar cédula {record.cedula}",
+                    f"Error al procesar cédula {record.cedula.value}",
                     "ERROR"
                 )
 

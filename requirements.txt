@@ -20,6 +20,9 @@ PyQt6-Qt6==6.6.1
 # Google Cloud Vision API - OCR principal (óptimo para escritura manual)
 google-cloud-vision>=3.5.0
 
+# Azure Computer Vision API - OCR alternativo (para comparación)
+azure-ai-vision-imageanalysis>=1.0.0b2
+
 # Procesamiento de imágenes
 opencv-python>=4.9.0.80  # CRÍTICO: Preprocesamiento avanzado de imágenes
 Pillow>=10.3.0           # Manipulación de imágenes

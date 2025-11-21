@@ -13,6 +13,11 @@ class CedulaFormatSpecification(Specification['CedulaRecord']):
 
     Esta especificación valida que el string de cédula contenga
     únicamente caracteres numéricos.
+
+    Note:
+        Con Value Objects, CedulaNumber ya garantiza formato válido
+        en su construcción, por lo que esta especificación siempre
+        retorna True si el CedulaRecord fue construido correctamente.
     """
 
     def is_satisfied_by(self, record: 'CedulaRecord') -> bool:
@@ -25,7 +30,9 @@ class CedulaFormatSpecification(Specification['CedulaRecord']):
         Returns:
             True si la cédula es numérica, False en caso contrario
         """
-        return record.cedula.isdigit()
+        # CedulaNumber ya valida formato en construcción
+        # Pero mantenemos la verificación explícita por consistencia
+        return record.cedula.value.isdigit()
 
     def __repr__(self) -> str:
         return "CedulaFormatSpecification(only_digits=True)"
@@ -39,13 +46,13 @@ class CedulaLengthSpecification(Specification['CedulaRecord']):
     pero este rango es configurable para otros países.
     """
 
-    def __init__(self, min_length: int = 6, max_length: int = 15):
+    def __init__(self, min_length: int = 3, max_length: int = 11):
         """
         Inicializa la especificación de longitud.
 
         Args:
-            min_length: Longitud mínima válida (default: 6)
-            max_length: Longitud máxima válida (default: 15)
+            min_length: Longitud mínima válida (default: 3)
+            max_length: Longitud máxima válida (default: 11)
 
         Raises:
             ValueError: Si min_length > max_length
@@ -69,7 +76,7 @@ class CedulaLengthSpecification(Specification['CedulaRecord']):
         Returns:
             True si la longitud está en el rango, False en caso contrario
         """
-        cedula_length = len(record.cedula)
+        cedula_length = len(record.cedula.value)
         return self.min_length <= cedula_length <= self.max_length
 
     def __repr__(self) -> str:
@@ -83,8 +90,8 @@ class ConfidenceSpecification(Specification['CedulaRecord']):
     """
     Verifica que el nivel de confianza del OCR sea aceptable.
 
-    La confianza es un valor entre 0 y 100 que indica qué tan
-    seguro está el motor OCR de la extracción.
+    La confianza se especifica como porcentaje (0-100) pero se compara
+    contra el Value Object ConfidenceScore (que almacena 0.0-1.0 internamente).
     """
 
     def __init__(self, min_confidence: float = 50.0):
@@ -115,10 +122,12 @@ class ConfidenceSpecification(Specification['CedulaRecord']):
         Returns:
             True si la confianza es >= min_confidence, False en caso contrario
         """
-        return record.confidence >= self.min_confidence
+        # Comparar usando el formato de porcentaje (0-100)
+        # ConfidenceScore.as_percentage() convierte 0.0-1.0 → 0-100
+        return record.confidence.as_percentage() >= self.min_confidence
 
     def __repr__(self) -> str:
-        return f"ConfidenceSpecification(min={self.min_confidence})"
+        return f"ConfidenceSpecification(min={self.min_confidence}%)"
 
 
 class CedulaNotStartsWithZeroSpecification(Specification['CedulaRecord']):
@@ -139,9 +148,9 @@ class CedulaNotStartsWithZeroSpecification(Specification['CedulaRecord']):
         Returns:
             True si no comienza con 0, False en caso contrario
         """
-        if not record.cedula:
+        if not record.cedula.value:
             return False
-        return record.cedula[0] != '0'
+        return record.cedula.value[0] != '0'
 
     def __repr__(self) -> str:
         return "CedulaNotStartsWithZeroSpecification()"
@@ -165,8 +174,8 @@ class ValidCedulaSpecification(Specification['CedulaRecord']):
 
     def __init__(
         self,
-        min_length: int = 6,
-        max_length: int = 15,
+        min_length: int = 3,
+        max_length: int = 11,
         min_confidence: float = 50.0,
         require_no_leading_zero: bool = False
     ):
@@ -233,8 +242,8 @@ class CedulaSpecifications:
             Especificación compuesta con todas las validaciones estándar
         """
         return ValidCedulaSpecification(
-            min_length=6,
-            max_length=15,
+            min_length=3,
+            max_length=11,
             min_confidence=min_confidence,
             require_no_leading_zero=False
         )
@@ -251,8 +260,8 @@ class CedulaSpecifications:
             Especificación con reglas específicas para Colombia
         """
         return ValidCedulaSpecification(
-            min_length=6,
-            max_length=10,  # Cédulas colombianas típicamente <= 10 dígitos
+            min_length=3,
+            max_length=11,  # Algunas personas escriben 11 dígitos
             min_confidence=min_confidence,
             require_no_leading_zero=True
         )
@@ -269,8 +278,8 @@ class CedulaSpecifications:
             Especificación con umbral de confianza alto
         """
         return ValidCedulaSpecification(
-            min_length=6,
-            max_length=15,
+            min_length=3,
+            max_length=11,
             min_confidence=min_confidence,
             require_no_leading_zero=False
         )

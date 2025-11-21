@@ -119,11 +119,12 @@ class EasyOCRAdapter(OCRPort):
 
                 # Verificar que sea solo dígitos
                 if text and text.isdigit():
-                    # Validar longitud de cédula (5-15 dígitos)
-                    if 5 <= len(text) <= 15:
+                    # Validar longitud de cédula (3-11 dígitos)
+                    if 3 <= len(text) <= 11:
                         # EasyOCR tiende a dar mejor confianza
                         if confidence >= 0.3:  # Umbral bajo inicial (30%)
-                            record = CedulaRecord(
+                            # Usar factory method para crear con Value Objects
+                            record = CedulaRecord.from_primitives(
                                 cedula=text,
                                 confidence=confidence * 100  # Convertir a porcentaje
                             )
@@ -146,8 +147,9 @@ class EasyOCRAdapter(OCRPort):
                     numbers = re.findall(r'\d+', text)
 
                     for num in numbers:
-                        if 5 <= len(num) <= 15:
-                            record = CedulaRecord(
+                        if 3 <= len(num) <= 11:
+                            # Usar factory method para crear con Value Objects
+                            record = CedulaRecord.from_primitives(
                                 cedula=num,
                                 confidence=confidence * 100 * 0.8  # Penalizar un poco
                             )
@@ -180,7 +182,10 @@ class EasyOCRAdapter(OCRPort):
         seen = {}
 
         for record in records:
-            if record.cedula not in seen or record.confidence > seen[record.cedula].confidence:
-                seen[record.cedula] = record
+            # Usar .value ya que cedula es ahora CedulaNumber (Value Object)
+            cedula_key = record.cedula.value
+            # Comparar confidence usando .as_percentage() ya que es ConfidenceScore
+            if cedula_key not in seen or record.confidence.as_percentage() > seen[cedula_key].confidence.as_percentage():
+                seen[cedula_key] = record
 
         return list(seen.values())

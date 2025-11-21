@@ -88,12 +88,12 @@ class ManualOCR(OCRPort):
                 continue
 
             # Validar longitud
-            if not (5 <= len(cedula) <= 15):
-                print(f"  ✗ '{cedula}' tiene longitud inválida ({len(cedula)} dígitos). Debe tener 5-15 dígitos.")
+            if not (3 <= len(cedula) <= 11):
+                print(f"  ✗ '{cedula}' tiene longitud inválida ({len(cedula)} dígitos). Debe tener 3-11 dígitos.")
                 continue
 
-            # Crear registro
-            record = CedulaRecord(
+            # Crear registro usando factory method
+            record = CedulaRecord.from_primitives(
                 cedula=cedula,
                 confidence=100.0,  # Entrada manual = 100% confianza
                 index=index

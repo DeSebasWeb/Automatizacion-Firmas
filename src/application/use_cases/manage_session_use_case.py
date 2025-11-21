@@ -94,7 +94,7 @@ class ManageSessionUseCase:
         if record:
             self.logger.debug(
                 "Siguiente registro obtenido",
-                cedula=record.cedula,
+                cedula=record.cedula.value,
                 index=record.index
             )
         else:

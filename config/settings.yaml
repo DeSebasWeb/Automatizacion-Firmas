@@ -3,10 +3,10 @@ automation:
   pre_enter_delay: 0.3
   typing_interval: 0.05
 capture_area:
-  height: 562
-  width: 343
-  x: 1114
-  y: 378
+  height: 490
+  width: 336
+  x: 1176
+  y: 436
 hotkeys:
   capture_area: f4
   next_record: ctrl+q
@@ -17,12 +17,12 @@ image_preprocessing:
     method: otsu
   contrast:
     clip_limit: 2.5
-    enabled: true
+    enabled: false
     tile_grid_size:
     - 8
     - 8
   denoise:
-    enabled: true
+    enabled: false
     h: 7
     search_window_size: 21
     template_window_size: 7
@@ -42,11 +42,20 @@ image_preprocessing:
   output_dir: temp/processed
   save_processed_images: true
   sharpen:
-    enabled: true
+    enabled: false
     intensity: normal
     use_unsharp_mask: false
-  upscale_factor: 4
+  upscale_factor: 2
 ocr:
+  azure_vision:
+    api_version: '2024-02-01'
+    confidence_threshold: 0.85
+    endpoint: ${AZURE_VISION_ENDPOINT}
+    max_retries: 3
+    subscription_key: ${AZURE_VISION_KEY}
+    timeout: 30
+  ensemble:
+    log_discrepancies: true
   google_vision:
     authentication: application_default
     confidence_threshold: 0.85
@@ -55,7 +64,7 @@ ocr:
   language: spa
   min_confidence: 85.0
   paddle_lang: es
-  provider: google_vision
+  provider: azure_vision
   psm: 6
   tesseract:
     field_regions:

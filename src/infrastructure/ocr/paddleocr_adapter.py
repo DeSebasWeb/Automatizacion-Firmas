@@ -128,11 +128,12 @@ class PaddleOCRAdapter(OCRPort):
                 numbers = re.findall(r'\d+', text_clean)
 
                 for num in numbers:
-                    # Validar longitud de cédula (5-15 dígitos)
-                    if 5 <= len(num) <= 15:
+                    # Validar longitud de cédula (3-11 dígitos)
+                    if 3 <= len(num) <= 11:
                         # PaddleOCR da buena confianza, umbral bajo
                         if confidence >= 0.3:  # 30% mínimo
-                            record = CedulaRecord(
+                            # Usar factory method para crear con Value Objects
+                            record = CedulaRecord.from_primitives(
                                 cedula=num,
                                 confidence=confidence * 100  # Convertir a porcentaje
                             )
@@ -166,7 +167,10 @@ class PaddleOCRAdapter(OCRPort):
         seen = {}
 
         for record in records:
-            if record.cedula not in seen or record.confidence > seen[record.cedula].confidence:
-                seen[record.cedula] = record
+            # Usar .value ya que cedula es ahora CedulaNumber (Value Object)
+            cedula_key = record.cedula.value
+            # Comparar confidence usando .as_percentage() ya que es ConfidenceScore
+            if cedula_key not in seen or record.confidence.as_percentage() > seen[cedula_key].confidence.as_percentage():
+                seen[cedula_key] = record
 
         return list(seen.values())

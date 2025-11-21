@@ -154,9 +154,10 @@ class TesseractOCR(OCRPort):
 
                         # Para escritura manual, aceptar confianza más baja
                         if confidence >= 0:  # Aceptar todos para debug
-                            # Validar longitud razonable (5 a 15 dígitos para cédulas)
-                            if 5 <= len(text) <= 15:
-                                record = CedulaRecord(
+                            # Validar longitud razonable (3 a 11 dígitos para cédulas)
+                            if 3 <= len(text) <= 11:
+                                # Usar factory method para crear con Value Objects
+                                record = CedulaRecord.from_primitives(
                                     cedula=text,
                                     confidence=max(confidence, 30.0)  # Mínimo 30% de confianza
                                 )
@@ -178,8 +179,9 @@ class TesseractOCR(OCRPort):
                 # Buscar números en el texto
                 numbers = re.findall(r'\d+', full_text)
                 for num in numbers:
-                    if 4 <= len(num) <= 20:
-                        record = CedulaRecord(
+                    if 3 <= len(num) <= 11:
+                        # Usar factory method para crear con Value Objects
+                        record = CedulaRecord.from_primitives(
                             cedula=num,
                             confidence=60.0  # Confianza media
                         )
@@ -209,7 +211,10 @@ class TesseractOCR(OCRPort):
         seen = {}
 
         for record in records:
-            if record.cedula not in seen or record.confidence > seen[record.cedula].confidence:
-                seen[record.cedula] = record
+            # Usar .value ya que cedula es ahora CedulaNumber (Value Object)
+            cedula_key = record.cedula.value
+            # Comparar confidence usando .as_percentage() ya que es ConfidenceScore
+            if cedula_key not in seen or record.confidence.as_percentage() > seen[cedula_key].confidence.as_percentage():
+                seen[cedula_key] = record
 
         return list(seen.values())

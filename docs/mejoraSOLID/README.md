@@ -12,7 +12,7 @@
 ### 📊 Resumen Ejecutivo
 
 **📄 [00_RESUMEN_MEJORAS_CRITICAS.md](00_RESUMEN_MEJORAS_CRITICAS.md)**
-- **Qué es:** Resumen completo de las 3 mejoras críticas implementadas
+- **Qué es:** Resumen completo de las 3 mejoras críticas implementadas (Fase 1)
 - **Contenido:**
   - Problemas identificados y soluciones
   - Código antes/después
@@ -61,6 +61,44 @@
 - **Audiencia:** Desarrolladores que trabajarán con validaciones
 - **Tiempo de lectura:** 20-25 minutos
 - **Prioridad:** 🟢 Baja - Leer cuando necesites crear especificaciones
+
+---
+
+### ⚡ Optimización de Performance
+
+**📄 [03_OPTIMIZACION_API_UNICA_LLAMADA.md](03_OPTIMIZACION_API_UNICA_LLAMADA.md)**
+- **Qué es:** Optimización crítica de Google Cloud Vision API
+- **Contenido:**
+  - Reducción de 15 llamadas a 1 sola (93% reducción)
+  - Estrategia de batch processing
+  - Comparación antes/después
+  - Análisis de costos
+  - Mejora de performance (~10x más rápido)
+  - Implementación técnica detallada
+  - Casos de uso
+- **Audiencia:** Desarrolladores que trabajan con Google Vision
+- **Tiempo de lectura:** 15-20 minutos
+- **Prioridad:** 🔴 Alta - Crítico para costos y performance
+
+---
+
+### 💎 Value Objects (Fase 2)
+
+**📄 [04_VALUE_OBJECTS_FASE_2.md](04_VALUE_OBJECTS_FASE_2.md)**
+- **Qué es:** Implementación completa de Value Objects del dominio
+- **Contenido:**
+  - Qué son Value Objects y qué problema resuelven
+  - CedulaNumber - Números de cédula con validación
+  - ConfidenceScore - Puntajes normalizados (0-1)
+  - Coordinate + Rectangle - Geometría inmutable
+  - Ejemplos de uso en el dominio
+  - Testing de Value Objects
+  - Beneficios por principio SOLID
+  - Guía de migración
+  - Tips y mejores prácticas
+- **Audiencia:** Todos los desarrolladores
+- **Tiempo de lectura:** 25-30 minutos
+- **Prioridad:** 🟡 Media - Leer para entender Value Objects
 
 ---
 
