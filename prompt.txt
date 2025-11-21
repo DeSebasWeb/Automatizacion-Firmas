@@ -1,0 +1,628 @@
+# Prompt para Claude Code: Implementación de Ensemble OCR con Confianza por Dígito
+
+## 🎯 OBJETIVO DEL PROYECTO
+
+Estoy construyendo un sistema de automatización para recolección de firmas de candidatos presidenciales en Colombia. El sistema extrae **cédulas manuscritas** de formularios escaneados.
+
+### Problema Actual
+
+Actualmente tengo implementados dos OCR:
+- ✅ **Google Cloud Vision API** (95-98% precisión)
+- ✅ **Azure Computer Vision Read API v4.0** (implementado recientemente)
+
+**PROBLEMA:** Ambos OCR a veces cometen errores en dígitos específicos:
+- Google puede confundir un **1 con 7** en cierta posición
+- Azure puede ser más preciso en esa posición pero fallar en otra
+- Actualmente elijo **la cédula completa** con mayor confianza total
+
+### La Solución: Ensemble a Nivel de Dígito
+
+En lugar de elegir una cédula completa, vamos a hacer algo **mucho más inteligente**:
+
+**COMPARAR DÍGITO POR DÍGITO y elegir el que tenga mayor confianza individual**
+
+#### Ejemplo Visual:
+
+**Método Actual (Malo):**
+```
+Google:  "1036221525" confianza total: 95% → ELEGIR ESTO
+Azure:   "7036221525" confianza total: 92% → DESCARTAR
+```
+Problema: Si Azure tiene razón en el primer dígito, lo perdemos.
+
+**Método Nuevo (Inteligente):**
+```
+Posición 0:  Google "1" (98%) vs Azure "7" (88%) → Elegir "1" ✅
+Posición 1:  Google "0" (95%) vs Azure "0" (96%) → Elegir "0" ✅  
+Posición 2:  Google "3" (92%) vs Azure "3" (97%) → Elegir "3" ✅
+Posición 3:  Google "6" (94%) vs Azure "6" (95%) → Elegir "6" ✅
+Posición 4:  Google "2" (89%) vs Azure "2" (94%) → Elegir "2" ✅
+Posición 5:  Google "2" (93%) vs Azure "2" (91%) → Elegir "2" ✅
+Posición 6:  Google "1" (96%) vs Azure "7" (85%) → Elegir "1" ✅
+Posición 7:  Google "5" (90%) vs Azure "5" (93%) → Elegir "5" ✅
+Posición 8:  Google "2" (88%) vs Azure "2" (92%) → Elegir "2" ✅
+Posición 9:  Google "5" (95%) vs Azure "5" (94%) → Elegir "5" ✅
+
+RESULTADO FINAL: "1036221525"
+Confianza promedio: 96.3%
+Fuentes: Google: 6 dígitos, Azure: 4 dígitos
+```
+
+**VENTAJAS:**
+- ✅ Aprovechamos lo mejor de cada OCR
+- ✅ Mayor precisión global (esperamos 98-99%+)
+- ✅ Reducción de errores críticos (1 vs 7) a casi 0%
+- ✅ Confianza más alta por dígito
+- ✅ Validación cruzada automática
+
+---
+
+## 📐 ARQUITECTURA ACTUAL
+
+```
+src/
+├── domain/
+│   └── ports/
+│       └── ocr_port.py                    # Interface base
+├── infrastructure/
+│   ├── ocr/
+│   │   ├── __init__.py
+│   │   ├── google_vision_adapter.py       # ✅ Implementado
+│   │   ├── azure_vision_adapter.py        # ✅ Implementado
+│   │   └── ensemble_ocr.py                # ⚠️ Necesita mejoras
+│   └── image/
+│       ├── enhancer.py                    # Pipeline preprocesamiento
+│       ├── preprocessor.py
+│       └── quality_metrics.py
+├── application/
+│   └── use_cases/
+│       └── extract_cedulas.py             # Caso de uso principal
+config/
+└── settings.yaml                          # Configuración
+```
+
+---
+
+## 🛠️ TAREAS DE IMPLEMENTACIÓN
+
+### TAREA 1: Modificar Google Vision Adapter
+
+**Archivo:** `src/infrastructure/ocr/google_vision_adapter.py`
+
+**Objetivo:** Exponer la confianza individual de cada carácter detectado.
+
+**Cambios necesarios:**
+
+1. **Agregar propiedad para guardar respuesta cruda:**
+```python
+class GoogleVisionAdapter(OCRPort):
+    def __init__(self, config: ConfigPort):
+        # ... código existente ...
+        self.last_raw_response = None  # NUEVO
+```
+
+2. **Guardar respuesta completa en extract_numbers():**
+```python
+def extract_numbers(self, image: Image.Image) -> List[str]:
+    # ... código existente ...
+    response = client.text_detection(image=vision_image)
+    self.last_raw_response = response  # GUARDAR RESPUESTA
+    # ... resto del código ...
+```
+
+3. **Agregar nuevo método para extraer confianza por carácter:**
+```python
+def get_character_confidences(self, text: str) -> Dict[str, List[float]]:
+    """
+    Extrae la confianza individual de cada carácter en el texto detectado.
+    
+    Google Vision API retorna:
+    - text_annotations[0]: Texto completo con confianza general
+    - text_annotations[1:]: Palabras individuales con sus bounds y confidence
+    
+    Args:
+        text: El texto (cédula) para el cual queremos las confianzas
+        
+    Returns:
+        Dict con:
+        - 'confidences': List[float] con confianza de cada carácter
+        - 'positions': List[int] con posición de cada carácter
+        - 'average': float con confianza promedio
+        
+    Example:
+        >>> confidences = adapter.get_character_confidences("1036221525")
+        >>> confidences
+        {
+            'confidences': [0.98, 0.95, 0.97, 0.94, ...],
+            'positions': [0, 1, 2, 3, ...],
+            'average': 0.956
+        }
+    """
+    if not self.last_raw_response:
+        raise ValueError("No hay respuesta disponible. Ejecuta extract_numbers() primero.")
+    
+    # IMPLEMENTACIÓN:
+    # 1. Buscar el texto en las anotaciones
+    # 2. Para cada carácter, encontrar su confianza en text_annotations
+    # 3. Google Vision da confidence por palabra, necesitas interpolar por carácter
+    # 4. Si no hay datos específicos, usar confidence general de la palabra
+    
+    # NOTA: Google Vision API no da confianza a nivel de carácter directamente,
+    # solo a nivel de palabra/símbolo. Necesitas:
+    # - Usar text_annotations para obtener palabras detectadas
+    # - Mapear cada palabra a sus caracteres
+    # - Asignar el confidence de la palabra a todos sus caracteres
+    
+    pass  # IMPLEMENTAR AQUÍ
+```
+
+**Documentación Google Vision API:**
+- La respuesta `text_annotations` contiene lista de `EntityAnnotation`
+- Cada `EntityAnnotation` tiene:
+  - `.description`: Texto detectado
+  - `.confidence`: Confianza (0.0 - 1.0)
+  - `.bounding_poly`: Posición del texto
+
+---
+
+### TAREA 2: Modificar Azure Vision Adapter
+
+**Archivo:** `src/infrastructure/ocr/azure_vision_adapter.py`
+
+**Objetivo:** Exponer la confianza individual de cada carácter/palabra detectada.
+
+**Cambios necesarios:**
+
+1. **Agregar propiedad para guardar respuesta cruda:**
+```python
+class AzureVisionAdapter(OCRPort):
+    def __init__(self, config: ConfigPort):
+        # ... código existente ...
+        self.last_raw_response = None  # NUEVO
+```
+
+2. **Guardar respuesta completa:**
+```python
+def extract_numbers(self, image: Image.Image) -> List[str]:
+    # ... código existente ...
+    result = self._get_read_result(operation_location)
+    self.last_raw_response = result  # GUARDAR RESPUESTA
+    # ... resto del código ...
+```
+
+3. **Agregar método para extraer confianza por carácter:**
+```python
+def get_character_confidences(self, text: str) -> Dict[str, List[float]]:
+    """
+    Extrae la confianza individual de cada carácter en el texto detectado.
+    
+    Azure Read API v4.0 retorna:
+    - analyzeResult.readResults[].lines[]: Líneas de texto
+    - Cada line tiene .words[] con confidence individual
+    
+    Args:
+        text: El texto (cédula) para el cual queremos las confianzas
+        
+    Returns:
+        Dict con:
+        - 'confidences': List[float] con confianza de cada carácter
+        - 'positions': List[int] con posición de cada carácter  
+        - 'average': float con confianza promedio
+        
+    Example:
+        >>> confidences = adapter.get_character_confidences("1036221525")
+        >>> confidences
+        {
+            'confidences': [0.97, 0.94, 0.98, 0.95, ...],
+            'positions': [0, 1, 2, 3, ...],
+            'average': 0.962
+        }
+    """
+    if not self.last_raw_response:
+        raise ValueError("No hay respuesta disponible. Ejecuta extract_numbers() primero.")
+    
+    # IMPLEMENTACIÓN:
+    # 1. Parsear analyzeResult.readResults
+    # 2. Para cada line.words, obtener el texto y confidence
+    # 3. Buscar las palabras que forman la cédula buscada
+    # 4. Azure da confidence por palabra, asignar a cada carácter de esa palabra
+    
+    pass  # IMPLEMENTAR AQUÍ
+```
+
+**Documentación Azure Read API:**
+- El resultado tiene estructura: `analyzeResult.readResults[page].lines[line].words[word]`
+- Cada `word` tiene:
+  - `.text`: Texto detectado
+  - `.confidence`: Confianza (0.0 - 1.0)
+  - `.boundingBox`: Posición
+
+---
+
+### TAREA 3: Crear Ensemble con Votación por Dígito
+
+**Archivo:** `src/infrastructure/ocr/digit_level_ensemble_ocr.py` (crear nuevo)
+
+Ya te proporcioné el código base en el artefacto anterior. Necesitas:
+
+1. **Copiar el código del artefacto** que te mostré
+2. **Adaptarlo** para usar los nuevos métodos `get_character_confidences()` 
+3. **Implementar `_extract_digit_confidences()`** correctamente:
+
+```python
+def _extract_digit_confidences(
+    self, 
+    cedula: str, 
+    ocr: OCRPort, 
+    source: str
+) -> List[DigitConfidence]:
+    """
+    Extrae la confianza individual de cada dígito usando el nuevo método.
+    """
+    try:
+        # Obtener confianzas del adapter
+        conf_data = ocr.get_character_confidences(cedula)
+        
+        digits = []
+        for i, (digit, conf) in enumerate(zip(cedula, conf_data['confidences'])):
+            digits.append(DigitConfidence(
+                digit=digit,
+                confidence=conf,
+                source=source,
+                position=i
+            ))
+        
+        return digits
+        
+    except Exception as e:
+        self.logger.error(f"Error extrayendo confianzas de {source}: {e}")
+        # Fallback: confianza uniforme
+        return [
+            DigitConfidence(digit=d, confidence=0.85, source=source, position=i)
+            for i, d in enumerate(cedula)
+        ]
+```
+
+---
+
+### TAREA 4: Actualizar Factory Pattern
+
+**Archivo:** `src/infrastructure/ocr/__init__.py`
+
+Actualizar para incluir el nuevo ensemble:
+
+```python
+from .google_vision_adapter import GoogleVisionAdapter
+from .azure_vision_adapter import AzureVisionAdapter
+from .digit_level_ensemble_ocr import DigitLevelEnsembleOCR
+
+def create_ocr_adapter(config):
+    """Factory para crear el OCR adapter según configuración."""
+    provider = config.get('ocr.provider', 'google_vision')
+    
+    if provider == 'google_vision':
+        return GoogleVisionAdapter(config)
+    
+    elif provider == 'azure_vision':
+        return AzureVisionAdapter(config)
+    
+    elif provider == 'digit_ensemble':
+        # Crear ambos adapters
+        google = GoogleVisionAdapter(config)
+        azure = AzureVisionAdapter(config)
+        
+        # Retornar ensemble que los combina
+        return DigitLevelEnsembleOCR(
+            config=config,
+            primary_ocr=google,
+            secondary_ocr=azure
+        )
+    
+    else:
+        raise ValueError(f"OCR provider desconocido: {provider}")
+
+__all__ = [
+    'GoogleVisionAdapter',
+    'AzureVisionAdapter', 
+    'DigitLevelEnsembleOCR',
+    'create_ocr_adapter'
+]
+```
+
+---
+
+### TAREA 5: Actualizar Configuración
+
+**Archivo:** `config/settings.yaml`
+
+Agregar nueva configuración:
+
+```yaml
+ocr:
+  # Opciones: 'google_vision', 'azure_vision', 'digit_ensemble'
+  provider: digit_ensemble
+  
+  # Configuración del ensemble por dígito
+  ensemble:
+    # Confianza mínima que debe tener un dígito individual para ser aceptado
+    min_digit_confidence: 0.70
+    
+    # Ratio mínimo de acuerdo entre ambos OCR (0.6 = 60% de dígitos deben coincidir)
+    # Si hay mucho desacuerdo, probablemente ninguno detectó bien la cédula
+    min_agreement_ratio: 0.60
+    
+    # Habilitar logging detallado de comparaciones
+    verbose_logging: true
+  
+  # Configuración de Google Vision (existente)
+  google_vision:
+    authentication: application_default
+    project_id: firmas-automatizacion
+    confidence_threshold: 0.85
+    
+  # Configuración de Azure Vision (existente)
+  azure_vision:
+    endpoint: "${AZURE_VISION_ENDPOINT}"
+    subscription_key: "${AZURE_VISION_KEY}"
+    api_version: "2024-02-01"
+    confidence_threshold: 0.85
+    max_retries: 3
+    timeout: 30
+
+# El resto de la configuración se mantiene igual
+image_preprocessing:
+  enabled: true
+  upscale_factor: 3
+  # ... etc
+```
+
+---
+
+### TAREA 6: Tests Unitarios
+
+**Archivo:** `tests/unit/test_digit_level_ensemble.py` (crear nuevo)
+
+Implementar tests para validar:
+
+```python
+import pytest
+from PIL import Image
+from unittest.mock import Mock, MagicMock
+
+class TestDigitLevelEnsemble:
+    """Tests para el ensemble con confianza por dígito."""
+    
+    def test_get_character_confidences_google(self):
+        """Test que Google Vision retorna confianzas por carácter."""
+        # Crear mock de GoogleVisionAdapter
+        # Verificar que get_character_confidences() funciona
+        pass
+    
+    def test_get_character_confidences_azure(self):
+        """Test que Azure Vision retorna confianzas por carácter."""
+        pass
+    
+    def test_digit_level_combination_same_result(self):
+        """Test cuando ambos OCR coinciden 100%."""
+        # Google: "1036221525" (todos 95% confianza)
+        # Azure:  "1036221525" (todos 96% confianza)
+        # Resultado esperado: "1036221525" con confianza ~95.5%
+        pass
+    
+    def test_digit_level_combination_different_digit(self):
+        """Test cuando difieren en un dígito."""
+        # Google: "1036221525" (dígito 0: 98%)
+        # Azure:  "7036221525" (dígito 0: 85%)
+        # Resultado esperado: "1036221525" (elige el de mayor confianza)
+        pass
+    
+    def test_digit_level_combination_low_confidence_rejection(self):
+        """Test que rechaza resultados con confianza muy baja."""
+        # Google: "1036221525" (dígito 5: 60%)
+        # Azure:  "1036221525" (dígito 5: 65%)
+        # Ambos bajo el threshold de 70%
+        # Resultado esperado: None (rechazado)
+        pass
+    
+    def test_low_agreement_ratio_rejection(self):
+        """Test que rechaza cuando hay poco acuerdo entre OCR."""
+        # Google: "1036221525"
+        # Azure:  "7894567890"
+        # Solo coinciden en 2 dígitos = 20% agreement
+        # Resultado esperado: None (bajo agreement_ratio de 60%)
+        pass
+    
+    def test_match_cedulas_by_similarity(self):
+        """Test del emparejamiento de cédulas similares."""
+        pass
+    
+    def test_fallback_to_best_individual(self):
+        """Test del fallback cuando no hay coincidencias."""
+        pass
+```
+
+---
+
+## 📊 MÉTRICAS DE ÉXITO
+
+La implementación será exitosa si:
+
+1. ✅ **Google Vision Adapter** expone `get_character_confidences()`
+2. ✅ **Azure Vision Adapter** expone `get_character_confidences()`
+3. ✅ **DigitLevelEnsembleOCR** combina correctamente por dígito
+4. ✅ **Tests pasan** todos los casos de prueba
+5. ✅ **Logging claro** muestra decisiones de combinación
+6. ✅ **Precisión mejora** a 98-99%+ en pruebas reales
+
+### Comparación Esperada
+
+| Métrica | Google Solo | Azure Solo | Ensemble Dígito |
+|---------|------------|------------|-----------------|
+| Precisión | 95-98% | 96-98% | **98-99.5%** ✨ |
+| Errores 1 vs 7 | 1-3% | 1-2% | **< 0.5%** ✨ |
+| Confianza avg | 95% | 96% | **97%** ✨ |
+| Tiempo | 1-2 seg | 1-2 seg | 2-3 seg |
+| Costo | $5 COP | $3 COP | $8 COP |
+
+---
+
+## 🔍 EJEMPLO DE OUTPUT ESPERADO
+
+Cuando ejecutes el sistema con el nuevo ensemble, deberías ver:
+
+```
+==================================================================
+INICIANDO ENSEMBLE OCR CON CONFIANZA POR DÍGITO
+==================================================================
+
+✓ OCR Primario (Google) encontró: 3 cédulas
+✓ OCR Secundario (Azure) encontró: 3 cédulas
+✓ Emparejadas: 3 cédulas
+
+[1/3] Procesando cédula:
+  Primary (Google):   1036221525 (conf: 94.2%)
+  Secondary (Azure):  7036221525 (conf: 91.8%)
+  
+  Comparación dígito por dígito:
+  ┌─────┬────────────────┬────────────────┬──────────┐
+  │ Pos │ Google         │ Azure          │ Elegido  │
+  ├─────┼────────────────┼────────────────┼──────────┤
+  │  0  │ '1' (98.2%)    │ '7' (87.5%)    │ '1' (G)  │
+  │  1  │ '0' (95.3%)    │ '0' (96.1%)    │ '0' (A)  │
+  │  2  │ '3' (92.7%)    │ '3' (97.2%)    │ '3' (A)  │
+  │  3  │ '6' (94.1%)    │ '6' (95.4%)    │ '6' (A)  │
+  │  4  │ '2' (89.3%)    │ '2' (93.8%)    │ '2' (A)  │
+  │  5  │ '2' (93.6%)    │ '2' (91.2%)    │ '2' (G)  │
+  │  6  │ '1' (96.4%)    │ '7' (84.9%)    │ '1' (G)  │
+  │  7  │ '5' (90.1%)    │ '5' (93.3%)    │ '5' (A)  │
+  │  8  │ '2' (88.7%)    │ '2' (92.1%)    │ '2' (A)  │
+  │  9  │ '5' (95.2%)    │ '5' (94.8%)    │ '5' (G)  │
+  └─────┴────────────────┴────────────────┴──────────┘
+  
+  Estadísticas:
+  - Acuerdo: 80% (8/10 dígitos coincidieron)
+  - Confianza promedio: 96.4%
+  - Fuentes: Google: 5 dígitos, Azure: 5 dígitos
+  
+  → RESULTADO FINAL: 1036221525 ✅
+    Confianza: 96.4% (mejor que ambos OCR individuales)
+
+[2/3] Procesando cédula:
+  Primary (Google):   3446532 (conf: 88.5%)
+  Secondary (Azure):  3446532 (conf: 92.3%)
+  
+  → RESULTADO FINAL: 3446532 ✅
+    Confianza: 91.2%
+    Acuerdo: 100% (idéntico en ambos OCR)
+
+[3/3] Procesando cédula:
+  Primary (Google):   43821028 (conf: 87.2%)
+  Secondary (Azure):  48821028 (conf: 85.9%)
+  
+  ⚠ Bajo acuerdo: 90% (9/10 dígitos)
+  Pos 1: '3' (73.2%) vs '8' (71.8%) → Ambos bajo threshold
+  
+  ✗ DESCARTADA (confianza insuficiente en posición crítica)
+
+==================================================================
+RESULTADO FINAL: 2 cédulas extraídas con alta confianza
+==================================================================
+```
+
+---
+
+## 🎓 DOCUMENTACIÓN REQUERIDA
+
+Después de implementar, crear/actualizar:
+
+1. **`docs/DIGIT_ENSEMBLE.md`** (nuevo)
+   - Explicación detallada de cómo funciona
+   - Diagramas de flujo
+   - Ejemplos de casos de uso
+   - Comparación con métodos tradicionales
+
+2. **`docs/ACCURACY_TIPS.md`** (actualizar)
+   - Agregar sección sobre ensemble por dígito
+   - Cuándo usarlo vs OCR individual
+   - Configuración óptima de thresholds
+
+3. **`README.md`** (actualizar)
+   - Agregar nueva opción de OCR: `digit_ensemble`
+   - Actualizar métricas de precisión
+
+---
+
+## 🚀 ORDEN DE IMPLEMENTACIÓN SUGERIDO
+
+1. ✅ **Modificar GoogleVisionAdapter** → agregar `get_character_confidences()`
+2. ✅ **Modificar AzureVisionAdapter** → agregar `get_character_confidences()`
+3. ✅ **Crear DigitLevelEnsembleOCR** → implementar lógica de combinación
+4. ✅ **Actualizar Factory** → agregar opción `digit_ensemble`
+5. ✅ **Actualizar settings.yaml** → nueva configuración
+6. ✅ **Crear tests** → validar comportamiento
+7. ✅ **Documentar** → crear/actualizar docs
+8. ✅ **Probar con imágenes reales** → validar mejora de precisión
+
+---
+
+## ⚠️ CONSIDERACIONES IMPORTANTES
+
+### Performance
+- El ensemble ejecuta **ambos OCR en paralelo** → tiempo ~1.5-2x individual
+- Para 1000 imágenes: ~30-40 minutos (vs 15-20 minutos con uno solo)
+- **Vale la pena** si ganas 3-5% de precisión
+
+### Costos
+- **Duplica el costo** (usas ambas APIs)
+- Google: $5.16 COP/1000 imgs
+- Azure: $3.44 COP/1000 imgs
+- **Total: ~$8.60 COP/1000 imgs**
+- Para 5000 imgs/mes: ~$43,000 COP/mes
+- **Sigue siendo muy económico** para la mejora de precisión
+
+### Cuándo NO usar ensemble
+- Imágenes de muy alta calidad (escritura impresa)
+- Presupuesto muy ajustado
+- Velocidad es más importante que precisión
+
+### Cuándo SÍ usar ensemble
+- ✅ **Escritura manuscrita difícil** (tu caso)
+- ✅ **Errores críticos inaceptables** (cédulas incorrectas)
+- ✅ **Necesitas máxima confianza** (legal/electoral)
+- ✅ **Tienes presupuesto** (aunque sea mínimo)
+
+---
+
+## 📞 RESULTADO FINAL ESPERADO
+
+Con esta implementación, deberías lograr:
+
+1. 🎯 **Precisión: 98-99.5%** (vs 95-98% actual)
+2. 🎯 **Errores críticos: < 0.5%** (vs 1-3% actual)
+3. 🎯 **Confianza promedio: 97%** (vs 95% actual)
+4. 🎯 **Validación cruzada automática** entre dos IA de diferentes proveedores
+5. 🎯 **Logging detallado** para auditoría y debugging
+6. 🎯 **Métricas por dígito** para análisis de calidad
+
+**Esto te dará la confianza necesaria para conseguir la inversión del proyecto.** 💰
+
+---
+
+## 🤖 FORMATO DE RESPUESTA ESPERADO
+
+Claude Code, por favor genera:
+
+1. ✅ Código completo de `get_character_confidences()` para **GoogleVisionAdapter**
+2. ✅ Código completo de `get_character_confidences()` para **AzureVisionAdapter**  
+3. ✅ Código completo de `DigitLevelEnsembleOCR` (ya proporcionado, ajustar si necesario)
+4. ✅ Actualización de `__init__.py` con factory pattern
+5. ✅ Actualización de `settings.yaml` con nueva configuración
+6. ✅ Tests unitarios completos en `test_digit_level_ensemble.py`
+7. ✅ Script de ejemplo de uso
+8. ✅ Documentación en `docs/DIGIT_ENSEMBLE.md`
+
+---
+
+**¿Listo para implementar el ensemble más inteligente y preciso posible?** 🚀🎯
+
+Este sistema te va a dar resultados de nivel empresarial/gubernamental que justificarán cualquier inversión en el proyecto.

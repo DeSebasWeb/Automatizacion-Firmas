@@ -23,6 +23,12 @@ except Exception:
     ENSEMBLE_AVAILABLE = False
 
 try:
+    from .digit_level_ensemble_ocr import DigitLevelEnsembleOCR
+    DIGIT_ENSEMBLE_AVAILABLE = True
+except Exception:
+    DIGIT_ENSEMBLE_AVAILABLE = False
+
+try:
     from .easyocr_adapter import EasyOCRAdapter
     EASYOCR_AVAILABLE = True
 except Exception:
@@ -50,6 +56,9 @@ if AZURE_VISION_AVAILABLE:
 
 if ENSEMBLE_AVAILABLE:
     __all__.append('EnsembleOCR')
+
+if DIGIT_ENSEMBLE_AVAILABLE:
+    __all__.append('DigitLevelEnsembleOCR')
 
 if EASYOCR_AVAILABLE:
     __all__.append('EasyOCRAdapter')

@@ -3,10 +3,10 @@ automation:
   pre_enter_delay: 0.3
   typing_interval: 0.05
 capture_area:
-  height: 490
-  width: 336
-  x: 1176
-  y: 436
+  height: 683
+  width: 506
+  x: 1060
+  y: 165
 hotkeys:
   capture_area: f4
   next_record: ctrl+q
@@ -54,6 +54,10 @@ ocr:
     max_retries: 3
     subscription_key: ${AZURE_VISION_KEY}
     timeout: 30
+  digit_ensemble:
+    min_agreement_ratio: 0.6
+    min_digit_confidence: 0.7
+    verbose_logging: true
   ensemble:
     log_discrepancies: true
   google_vision:
@@ -64,7 +68,7 @@ ocr:
   language: spa
   min_confidence: 85.0
   paddle_lang: es
-  provider: azure_vision
+  provider: digit_ensemble
   psm: 6
   tesseract:
     field_regions:

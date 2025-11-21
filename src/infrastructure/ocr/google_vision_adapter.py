@@ -56,6 +56,7 @@ class GoogleVisionAdapter(OCRPort):
 
         self.config = config
         self.client = None
+        self.last_raw_response = None  # Para guardar respuesta completa y extraer confianza por dígito
 
         # Inicializar preprocesador con configuración
         preprocessing_config = self.config.get('image_preprocessing', {})
@@ -170,6 +171,9 @@ class GoogleVisionAdapter(OCRPort):
                 image=vision_image,
                 image_context=image_context
             )
+
+            # Guardar respuesta completa para análisis de confianza por dígito
+            self.last_raw_response = response
 
             if response.error.message:
                 print(f"ERROR Google Vision API: {response.error.message}")
@@ -299,6 +303,120 @@ class GoogleVisionAdapter(OCRPort):
                 seen[cedula_key] = record
 
         return list(seen.values())
+
+    def get_character_confidences(self, text: str) -> Dict[str, any]:
+        """
+        Extrae la confianza individual de cada carácter en el texto detectado.
+
+        Google Vision API retorna confianza a nivel de símbolo/carácter en:
+        - full_text_annotation.pages[].blocks[].paragraphs[].words[].symbols[]
+
+        Args:
+            text: El texto (cédula) para el cual queremos las confianzas
+
+        Returns:
+            Dict con:
+            - 'confidences': List[float] con confianza de cada carácter (0.0-1.0)
+            - 'positions': List[int] con posición de cada carácter
+            - 'average': float con confianza promedio
+            - 'source': str identificando el origen
+
+        Example:
+            >>> confidences = adapter.get_character_confidences("1036221525")
+            >>> confidences
+            {
+                'confidences': [0.98, 0.95, 0.97, 0.94, ...],
+                'positions': [0, 1, 2, 3, ...],
+                'average': 0.956,
+                'source': 'google_vision'
+            }
+
+        Raises:
+            ValueError: Si no hay respuesta disponible (ejecuta extract_cedulas() primero)
+        """
+        if not self.last_raw_response:
+            raise ValueError("No hay respuesta disponible. Ejecuta extract_cedulas() primero.")
+
+        if not self.last_raw_response.full_text_annotation:
+            print("ADVERTENCIA: No hay full_text_annotation en respuesta de Google Vision")
+            # Fallback: confianza uniforme
+            return {
+                'confidences': [0.85] * len(text),
+                'positions': list(range(len(text))),
+                'average': 0.85,
+                'source': 'google_vision'
+            }
+
+        # Limpiar el texto buscado (eliminar espacios, puntos, etc)
+        text_clean = text.replace(' ', '').replace('.', '').replace(',', '').replace('-', '')
+
+        # Extraer todos los símbolos con sus confianzas
+        all_symbols = []
+
+        # Iterar sobre la estructura jerárquica de Google Vision
+        for page in self.last_raw_response.full_text_annotation.pages:
+            for block in page.blocks:
+                for paragraph in block.paragraphs:
+                    for word in paragraph.words:
+                        # Construir el texto de la palabra
+                        word_text = ''.join([symbol.text for symbol in word.symbols])
+
+                        # Obtener confianza de la palabra (si existe)
+                        # Google Vision da confidence a nivel de palabra, no de símbolo individual
+                        word_confidence = word.confidence if hasattr(word, 'confidence') else 0.95
+
+                        # Agregar cada símbolo con la confianza de su palabra
+                        for symbol in word.symbols:
+                            symbol_conf = symbol.confidence if hasattr(symbol, 'confidence') else word_confidence
+                            all_symbols.append({
+                                'text': symbol.text,
+                                'confidence': symbol_conf
+                            })
+
+        # Buscar el texto en los símbolos detectados
+        # Construir string de todos los símbolos
+        all_text = ''.join([s['text'] for s in all_symbols])
+        all_text_clean = ''.join([c for c in all_text if c.isdigit()])
+
+        # Intentar encontrar el texto buscado en el texto detectado
+        confidences = []
+        positions = []
+
+        if text_clean in all_text_clean:
+            # Encontrado - extraer confianzas correspondientes
+            start_idx = all_text_clean.index(text_clean)
+
+            # Mapear índices de all_text_clean a all_symbols
+            digit_counter = 0
+            symbol_idx = 0
+
+            for symbol in all_symbols:
+                if symbol['text'].isdigit():
+                    if digit_counter >= start_idx and digit_counter < start_idx + len(text_clean):
+                        confidences.append(symbol['confidence'])
+                        positions.append(digit_counter - start_idx)
+                    digit_counter += 1
+        else:
+            # No encontrado - usar confianza uniforme basada en promedio general
+            print(f"ADVERTENCIA: Texto '{text_clean}' no encontrado en respuesta de Google Vision")
+            print(f"DEBUG: Texto detectado: '{all_text_clean[:100]}...'")
+
+            # Calcular confianza promedio de todos los símbolos numéricos
+            numeric_symbols = [s for s in all_symbols if s['text'].isdigit()]
+            avg_conf = sum(s['confidence'] for s in numeric_symbols) / len(numeric_symbols) if numeric_symbols else 0.90
+
+            confidences = [avg_conf] * len(text_clean)
+            positions = list(range(len(text_clean)))
+
+        # Calcular promedio
+        average = sum(confidences) / len(confidences) if confidences else 0.0
+
+        return {
+            'confidences': confidences,
+            'positions': positions,
+            'average': average,
+            'source': 'google_vision'
+        }
 
     def extract_full_form_data(self, image: Image.Image, expected_rows: int = 15) -> List[RowData]:
         """

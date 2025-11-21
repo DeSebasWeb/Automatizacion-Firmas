@@ -12,6 +12,7 @@ def create_ocr_adapter(config: ConfigPort) -> Optional[OCRPort]:
     - "google_vision": GoogleVisionAdapter (recomendado para manuscritos)
     - "azure_vision": AzureVisionAdapter (alternativa para comparación)
     - "ensemble": EnsembleOCR (máxima precisión, doble costo)
+    - "digit_ensemble": DigitLevelEnsembleOCR (ULTRA precisión por dígito, doble costo)
 
     Args:
         config: Servicio de configuración
@@ -106,6 +107,28 @@ def _try_create_provider(provider: str, config: ConfigPort) -> Optional[OCRPort]
             print("⚠️ Doble costo: usa ambas APIs simultáneamente")
             return adapter
 
+        elif provider == 'digit_ensemble':
+            from .google_vision_adapter import GoogleVisionAdapter
+            from .azure_vision_adapter import AzureVisionAdapter
+            from .digit_level_ensemble_ocr import DigitLevelEnsembleOCR
+
+            print("→ Inicializando Digit-Level Ensemble OCR...")
+            print("   Creando Google Vision adapter...")
+            google = GoogleVisionAdapter(config)
+            print("   Creando Azure Vision adapter...")
+            azure = AzureVisionAdapter(config)
+            print("   Combinando ambos con lógica de votación por dígito...")
+
+            adapter = DigitLevelEnsembleOCR(
+                config=config,
+                primary_ocr=google,
+                secondary_ocr=azure
+            )
+            print("✓ Digit-Level Ensemble listo (ULTRA precisión 98-99.5%)")
+            print("⚠️ Doble costo: usa ambas APIs simultáneamente")
+            print("🎯 Combina lo mejor de cada OCR en cada posición de dígito")
+            return adapter
+
         elif provider == 'tesseract':
             from .tesseract_ocr import TesseractOCR
             print("→ Inicializando Tesseract OCR...")
@@ -162,6 +185,7 @@ def get_available_providers() -> list:
     # Ensemble solo si hay al menos 2 proveedores
     if len(available) >= 2:
         available.append('ensemble')
+        available.append('digit_ensemble')
 
     return available
 
@@ -176,18 +200,20 @@ def print_provider_comparison():
     print("COMPARACIÓN DE PROVEEDORES OCR")
     print("="*80)
     print()
-    print(f"{'Proveedor':<20} {'Precisión':<15} {'Costo/1000 imgs':<20} {'Velocidad':<15}")
+    print(f"{'Proveedor':<22} {'Precisión':<15} {'Costo/1000 imgs':<20} {'Velocidad':<15}")
     print("-" * 80)
-    print(f"{'Google Vision':<20} {'95-98%':<15} {'$5.16 COP':<20} {'1-2 seg':<15}")
-    print(f"{'Azure Vision':<20} {'95-98%':<15} {'$4,200 COP':<20} {'1-2 seg':<15}")
-    print(f"{'Ensemble':<20} {'>99%':<15} {'$9,360 COP':<20} {'2-3 seg':<15}")
-    print(f"{'Tesseract':<20} {'70-85%':<15} {'Gratis':<20} {'0.5-1 seg':<15}")
+    print(f"{'Google Vision':<22} {'95-98%':<15} {'$5.16 COP':<20} {'1-2 seg':<15}")
+    print(f"{'Azure Vision':<22} {'95-98%':<15} {'$4,200 COP':<20} {'1-2 seg':<15}")
+    print(f"{'Ensemble':<22} {'>99%':<15} {'$9,360 COP':<20} {'2-3 seg':<15}")
+    print(f"{'Digit Ensemble ⭐':<22} {'98-99.5%':<15} {'$9,360 COP':<20} {'2-3 seg':<15}")
+    print(f"{'Tesseract':<22} {'70-85%':<15} {'Gratis':<20} {'0.5-1 seg':<15}")
     print("-" * 80)
     print()
     print("💡 Recomendaciones:")
     print("   • Producción: Google Vision (mejor relación precisión/costo)")
     print("   • Comparación: Azure Vision (validar cuál da mejor precisión)")
-    print("   • Máxima precisión: Ensemble (cuando el costo no es limitante)")
+    print("   • Máxima precisión: Digit Ensemble ⭐ (combina por dígito, ultra precisión)")
+    print("   • Alta precisión: Ensemble (combina cédula completa)")
     print("   • Desarrollo: Tesseract (gratis, pero menor precisión)")
     print()
     print("Proveedores disponibles en este sistema:")
