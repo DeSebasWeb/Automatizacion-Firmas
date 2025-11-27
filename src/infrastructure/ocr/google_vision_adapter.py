@@ -269,19 +269,28 @@ class GoogleVisionAdapter(OCRPort):
         """
         Extrae números del texto reconocido.
 
+        ESTRATEGIA MEJORADA:
+        Cuando hay letras entre dígitos (ej: "107 116C1931"), NO separar
+        en múltiples números. En su lugar, eliminar TODAS las letras y
+        espacios, dejando solo dígitos continuos.
+
+        Esto evita que una cédula de 10 dígitos se divida en múltiples fragmentos.
+
         Args:
-            text: Texto reconocido por Google Vision
+            text: Texto reconocido por Google Vision (ej: "107 116C1931")
 
         Returns:
-            Lista de strings numéricos
+            Lista con UN string numérico por línea (ej: ["1071161931"])
         """
-        # Limpiar texto
-        text_clean = text.replace(' ', '').replace('.', '').replace(',', '').replace('-', '').replace('\n', '')
+        # Eliminar TODOS los caracteres que no sean dígitos
+        # Esto incluye: letras, espacios, puntos, comas, guiones, etc.
+        text_clean = re.sub(r'[^\d]', '', text)
 
-        # Extraer solo números
-        numbers = re.findall(r'\d+', text_clean)
-
-        return numbers
+        # Si queda algún número, retornarlo como una sola cédula
+        if text_clean:
+            return [text_clean]
+        else:
+            return []
 
     def _remove_duplicates(self, records: List[CedulaRecord]) -> List[CedulaRecord]:
         """
