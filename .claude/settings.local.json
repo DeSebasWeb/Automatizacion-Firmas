@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python -m py_compile:*)"
+      "Bash(python -m py_compile:*)",
+      "Bash(del \"E:\\ProyectoFirmasAutomatizacion\\src\\infrastructure\\ocr\\aws_textract_adapter.py\")",
+      "Bash(del \"E:\\ProyectoFirmasAutomatizacion\\src\\infrastructure\\ocr\\triple_ensemble_ocr.py\")",
+      "Bash(del \"E:\\ProyectoFirmasAutomatizacion\\docs\\AWS_TEXTRACT_SETUP.md\")",
+      "Bash(del \"E:\\ProyectoFirmasAutomatizacion\\docs\\TRIPLE_ENSEMBLE_QUICKSTART.md\")",
+      "Bash(if exist \"E:\\ProyectoFirmasAutomatizacion\\tests\\unit\\test_triple_ensemble.py\" del \"E:\\ProyectoFirmasAutomatizacion\\tests\\unit\\test_triple_ensemble.py\")",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []

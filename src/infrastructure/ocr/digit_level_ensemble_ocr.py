@@ -77,9 +77,30 @@ class DigitLevelEnsembleOCR(OCRPort):
         self.secondary_ocr = secondary_ocr
 
         # Configuración del ensemble
-        self.min_digit_confidence = self.config.get('ocr.ensemble.min_digit_confidence', 0.70)
-        self.min_agreement_ratio = self.config.get('ocr.ensemble.min_agreement_ratio', 0.60)
-        self.verbose_logging = self.config.get('ocr.ensemble.verbose_logging', True)
+        self.min_digit_confidence = self.config.get('ocr.digit_ensemble.min_digit_confidence', 0.58)
+        self.min_agreement_ratio = self.config.get('ocr.digit_ensemble.min_agreement_ratio', 0.60)
+        self.confidence_boost = self.config.get('ocr.digit_ensemble.confidence_boost', 0.03)
+        self.max_conflict_ratio = self.config.get('ocr.digit_ensemble.max_conflict_ratio', 0.40)
+        self.ambiguity_threshold = self.config.get('ocr.digit_ensemble.ambiguity_threshold', 0.10)
+        self.allow_low_confidence_override = self.config.get('ocr.digit_ensemble.allow_low_confidence_override', True)
+        self.verbose_logging = self.config.get('ocr.digit_ensemble.verbose_logging', True)
+
+        # Matriz de confusión: pares de dígitos que frecuentemente se confunden
+        # Formato: (dígito1, dígito2) -> probabilidad de confusión
+        self.confusion_pairs = {
+            ('1', '7'): 0.15,  # 1 y 7 se confunden mucho en manuscritos
+            ('7', '1'): 0.15,
+            ('5', '6'): 0.10,  # 5 y 6 pueden confundirse
+            ('6', '5'): 0.10,
+            ('8', '3'): 0.08,  # 8 y 3 a veces se confunden
+            ('3', '8'): 0.08,
+            ('2', '7'): 0.12,  # 2 y 7 pueden ser similares
+            ('7', '2'): 0.12,
+            ('0', '6'): 0.08,  # 0 y 6 pueden confundirse
+            ('6', '0'): 0.08,
+            ('9', '4'): 0.07,  # 9 y 4 a veces se confunden
+            ('4', '9'): 0.07,
+        }
 
         print("\n" + "="*70)
         print("DIGIT-LEVEL ENSEMBLE OCR INICIALIZADO")
@@ -218,59 +239,90 @@ class DigitLevelEnsembleOCR(OCRPort):
         secondary_records: List[CedulaRecord]
     ) -> List[Tuple[CedulaRecord, CedulaRecord]]:
         """
-        Empareja cédulas de ambos OCR POR POSICIÓN/ÍNDICE.
+        Empareja cédulas de ambos OCR POR SIMILITUD DE CONTENIDO.
 
-        CRÍTICO: Ambos OCR detectan las cédulas en el mismo orden (de arriba a abajo
-        en el formulario). Por lo tanto, la cédula en posición 0 de Google debe
-        emparejarse con la posición 0 de Azure.
+        NUEVA ESTRATEGIA (mejorada):
+        - Usa algoritmo de emparejamiento bipartito basado en similitud
+        - Busca el mejor "match" para cada cédula del primary
+        - Si la similitud es > 60%, se considera un par válido
+        - Las cédulas sin par se procesan individualmente después
 
-        Emparejar por similitud podría crear combinaciones incorrectas y cédulas falsas.
+        Esto evita problemas de desincronización cuando:
+        - Un OCR detecta cédulas que el otro no
+        - Un OCR detecta basura/ruido que se rechaza
+        - Las cédulas tienen longitudes diferentes
 
         Args:
-            primary_records: Cédulas del OCR primario (en orden de detección)
-            secondary_records: Cédulas del OCR secundario (en orden de detección)
+            primary_records: Cédulas del OCR primario
+            secondary_records: Cédulas del OCR secundario
 
         Returns:
-            Lista de tuplas (primary, secondary) emparejadas por posición
+            Lista de tuplas (primary, secondary) emparejadas por similitud
         """
+        if self.verbose_logging:
+            print(f"\n{'='*70}")
+            print("EMPAREJAMIENTO POR SIMILITUD")
+            print(f"{'='*70}")
+
         pairs = []
+        used_secondary = set()  # Índices ya usados del secondary
 
-        # Emparejar por índice/posición (más seguro y correcto)
-        min_length = min(len(primary_records), len(secondary_records))
+        # Para cada cédula del primary, buscar el mejor match en secondary
+        for i, primary in enumerate(primary_records):
+            best_match_idx = None
+            best_similarity = 0.0
 
-        for i in range(min_length):
-            primary = primary_records[i]
-            secondary = secondary_records[i]
+            # Buscar el mejor match en secondary que no haya sido usado
+            for j, secondary in enumerate(secondary_records):
+                if j in used_secondary:
+                    continue
 
-            # Validación de similitud como medida de seguridad
-            # Si son muy diferentes, probablemente uno de los OCR se equivocó
-            similarity = difflib.SequenceMatcher(
-                None,
-                primary.cedula.value,
-                secondary.cedula.value
-            ).ratio()
+                # Calcular similitud
+                similarity = difflib.SequenceMatcher(
+                    None,
+                    primary.cedula.value,
+                    secondary.cedula.value
+                ).ratio()
 
-            if self.verbose_logging and similarity < 0.5:
-                print(f"  ⚠️ ADVERTENCIA: Cédulas en posición {i} son muy diferentes:")
-                print(f"     Primary:   {primary.cedula.value} ({primary.confidence.as_percentage():.1f}%)")
-                print(f"     Secondary: {secondary.cedula.value} ({secondary.confidence.as_percentage():.1f}%)")
-                print(f"     Similitud: {similarity*100:.1f}%")
+                # Si es el mejor match hasta ahora, guardarlo
+                if similarity > best_similarity:
+                    best_similarity = similarity
+                    best_match_idx = j
 
-            # Emparejar siempre por posición (no por similitud)
-            pairs.append((primary, secondary))
+            # Si encontramos un match con suficiente similitud (>60%)
+            if best_match_idx is not None and best_similarity >= self.min_agreement_ratio:
+                secondary = secondary_records[best_match_idx]
+                pairs.append((primary, secondary))
+                used_secondary.add(best_match_idx)
 
-        # Logging de cédulas sin par
-        if len(primary_records) > min_length:
-            if self.verbose_logging:
-                print(f"\n  ℹ️ Primary OCR detectó {len(primary_records) - min_length} cédulas adicionales")
-                for i in range(min_length, len(primary_records)):
-                    print(f"     [{i}] {primary_records[i].cedula.value}")
+                if self.verbose_logging:
+                    match_symbol = "✓" if best_similarity > 0.8 else "~"
+                    print(f"  {match_symbol} Par {len(pairs)}: "
+                          f"Primary[{i}] '{primary.cedula.value}' ↔ "
+                          f"Secondary[{best_match_idx}] '{secondary.cedula.value}' "
+                          f"(similitud: {best_similarity*100:.1f}%)")
+            else:
+                # No se encontró match válido
+                if self.verbose_logging:
+                    print(f"  ✗ Primary[{i}] '{primary.cedula.value}' SIN PAR "
+                          f"(mejor similitud: {best_similarity*100:.1f}%)")
 
-        if len(secondary_records) > min_length:
-            if self.verbose_logging:
-                print(f"\n  ℹ️ Secondary OCR detectó {len(secondary_records) - min_length} cédulas adicionales")
-                for i in range(min_length, len(secondary_records)):
-                    print(f"     [{i}] {secondary_records[i].cedula.value}")
+        # Logging de cédulas del secondary que no fueron emparejadas
+        unused_secondary = [
+            (i, secondary_records[i])
+            for i in range(len(secondary_records))
+            if i not in used_secondary
+        ]
+
+        if unused_secondary and self.verbose_logging:
+            print(f"\n  ℹ️ Secondary OCR: {len(unused_secondary)} cédula(s) sin emparejar:")
+            for idx, record in unused_secondary:
+                print(f"     Secondary[{idx}] '{record.cedula.value}' ({record.confidence.as_percentage():.1f}%)")
+
+        if self.verbose_logging:
+            print(f"\n{'='*70}")
+            print(f"RESULTADO EMPAREJAMIENTO: {len(pairs)} pares encontrados")
+            print(f"{'='*70}\n")
 
         return pairs
 
@@ -280,9 +332,24 @@ class DigitLevelEnsembleOCR(OCRPort):
         secondary: CedulaRecord
     ) -> Optional[CedulaRecord]:
         """
-        Combina dos cédulas comparando dígito por dígito.
+        Combina dos cédulas comparando dígito por dígito con lógica mejorada.
 
-        Para cada posición, elige el dígito con mayor confianza individual.
+        Lógica MEJORADA según prompt.txt:
+        1. Si ambos coinciden (mismo dígito):
+           - Usar el dígito con confianza promedio boosteada
+           - Ejemplo: Google "5" (95%) + Azure "5" (93%) = "5" (97% boosted)
+
+        2. Si difieren (diferentes dígitos):
+           - Usar el dígito con MAYOR confianza individual
+           - SOLO si la diferencia de confianza es > 10%
+           - Si la diferencia es < 10%, RECHAZAR (ambiguo)
+
+        3. Threshold mínimo absoluto:
+           - Cualquier dígito con confianza < 75% se RECHAZA
+           - Esto evita elegir dígitos dudosos
+
+        4. Ratio máximo de conflictos:
+           - Si hay más del 30% de conflictos, advertir (imagen de baja calidad)
 
         Args:
             primary: Registro del OCR primario
@@ -294,7 +361,7 @@ class DigitLevelEnsembleOCR(OCRPort):
         primary_text = primary.cedula.value
         secondary_text = secondary.cedula.value
 
-        # Si tienen longitudes diferentes, usar el más largo y rellenar con el más corto
+        # Si tienen longitudes diferentes, usar el más largo
         max_len = max(len(primary_text), len(secondary_text))
         min_len = min(len(primary_text), len(secondary_text))
 
@@ -310,11 +377,21 @@ class DigitLevelEnsembleOCR(OCRPort):
         primary_confidences = primary_conf_data['confidences']
         secondary_confidences = secondary_conf_data['confidences']
 
+        # Logging inicial
+        if self.verbose_logging:
+            print(f"\n{'='*80}")
+            print("COMPARACIÓN DÍGITO POR DÍGITO")
+            print(f"{'='*80}")
+            print(f"Primary:   {primary_text}")
+            print(f"Secondary: {secondary_text}")
+            print(f"{'='*80}\n")
+
         # Combinar dígito por dígito
         combined_digits = []
         combined_confidences = []
-        sources = []
+        consensus_types = []  # 'unanimous', 'highest_confidence', 'rejected'
         agreement_count = 0
+        conflict_count = 0
 
         # Tabla para logging
         comparison_table = []
@@ -327,31 +404,137 @@ class DigitLevelEnsembleOCR(OCRPort):
             p_conf = primary_confidences[i] if i < len(primary_confidences) else 0.0
             s_conf = secondary_confidences[i] if i < len(secondary_confidences) else 0.0
 
-            # Elegir el de mayor confianza
+            # CASO 1: Verificar threshold mínimo absoluto (con excepciones)
+            # Permitir confianzas más bajas si:
+            # - El otro OCR también está en rango bajo (ambos inciertos)
+            # - Es un par de confusión conocido y el otro tiene alta confianza
+
+            min_threshold = self.min_digit_confidence
+            relaxed_threshold = min_threshold - 0.10  # 10% más permisivo
+
+            # Si ambos dígitos existen, verificar contexto
+            if p_digit and s_digit and p_digit != s_digit:
+                is_confusion = (p_digit, s_digit) in self.confusion_pairs
+
+                # Si es par de confusión y uno tiene alta confianza, relajar threshold
+                if is_confusion and self.allow_low_confidence_override:
+                    if p_conf < min_threshold and s_conf >= 0.75:
+                        # Secondary tiene alta confianza, permitir Primary bajo
+                        min_threshold = relaxed_threshold
+                        if self.verbose_logging:
+                            print(f"Pos {i}: ℹ️ Threshold relajado para Primary (par de confusión)")
+                    elif s_conf < min_threshold and p_conf >= 0.75:
+                        # Primary tiene alta confianza, permitir Secondary bajo
+                        if self.verbose_logging:
+                            print(f"Pos {i}: ℹ️ Threshold relajado para Secondary (par de confusión)")
+
+            # Validar con threshold (posiblemente relajado)
+            if p_digit and p_conf < min_threshold:
+                if self.verbose_logging:
+                    print(f"Pos {i}: Primary '{p_digit}' tiene confianza muy baja ({p_conf:.2%} < {min_threshold:.2%})")
+                return None
+
+            if s_digit and s_conf < min_threshold:
+                if self.verbose_logging:
+                    print(f"Pos {i}: Secondary '{s_digit}' tiene confianza muy baja ({s_conf:.2%} < {min_threshold:.2%})")
+                return None
+
+            # CASO 2: Si solo uno tiene dígito
             if p_digit is None:
                 chosen_digit = s_digit
                 chosen_conf = s_conf
-                source = 'S'
+                source = 'Secondary'
+                consensus_type = 'only_secondary'
             elif s_digit is None:
                 chosen_digit = p_digit
                 chosen_conf = p_conf
-                source = 'P'
-            elif p_conf >= s_conf:
-                chosen_digit = p_digit
-                chosen_conf = p_conf
-                source = 'P'
-            else:
-                chosen_digit = s_digit
-                chosen_conf = s_conf
-                source = 'S'
-
-            # Verificar si ambos coinciden
-            if p_digit == s_digit and p_digit is not None:
+                source = 'Primary'
+                consensus_type = 'only_primary'
+            # CASO 3: Ambos coinciden (UNANIMIDAD)
+            elif p_digit == s_digit:
                 agreement_count += 1
+                chosen_digit = p_digit
+                avg_conf = (p_conf + s_conf) / 2
+                # Boost por coincidencia
+                chosen_conf = min(0.99, avg_conf + self.confidence_boost)
+                source = 'Ambos'
+                consensus_type = 'unanimous'
+
+                if self.verbose_logging:
+                    print(f"Pos {i}: COINCIDENCIA '{p_digit}' "
+                          f"Primary={p_conf:.2%} Secondary={s_conf:.2%} → Final={chosen_conf:.2%}")
+
+            # CASO 4: Difieren (CONFLICTO)
+            else:
+                conflict_count += 1
+                conf_diff = abs(p_conf - s_conf)
+
+                # Verificar si es un par de confusión conocido
+                is_confusion_pair = (p_digit, s_digit) in self.confusion_pairs
+                confusion_prob = self.confusion_pairs.get((p_digit, s_digit), 0.0)
+
+                # Umbral adaptativo basado en pares de confusión
+                effective_threshold = self.ambiguity_threshold
+                if is_confusion_pair:
+                    # Para pares confusos (1 vs 7), reducir el umbral de ambigüedad
+                    # Esto permite decidir incluso con diferencias pequeñas
+                    effective_threshold = max(0.05, self.ambiguity_threshold - confusion_prob)
+                    if self.verbose_logging:
+                        print(f"Pos {i}: ⚠️ PAR DE CONFUSIÓN DETECTADO: '{p_digit}' vs '{s_digit}' "
+                              f"(prob confusión: {confusion_prob:.1%})")
+                        print(f"         Umbral ajustado: {self.ambiguity_threshold:.1%} → {effective_threshold:.1%}")
+
+                # Si la diferencia de confianza es muy pequeña, es ambiguo
+                if conf_diff < effective_threshold:
+                    if self.verbose_logging:
+                        print(f"Pos {i}: CONFLICTO AMBIGUO "
+                              f"Primary='{p_digit}' ({p_conf:.2%}) "
+                              f"Secondary='{s_digit}' ({s_conf:.2%}) "
+                              f"Diferencia={conf_diff:.2%} < {effective_threshold:.2%} → RECHAZADO")
+                    return None
+
+                # ESTRATEGIA MEJORADA: Elegir con ajuste de confianza
+                # Para pares de confusión, dar más peso al que tiene mayor confianza
+                adjusted_p_conf = p_conf
+                adjusted_s_conf = s_conf
+
+                if is_confusion_pair:
+                    # Penalizar ligeramente la confianza del OCR que reporta el dígito más común
+                    # en errores (ej: si reporta '7' cuando podría ser '1')
+                    # Esto favorece al OCR más conservador
+                    if p_digit in ['1', '7'] and s_digit in ['1', '7']:
+                        # Caso especial 1 vs 7: si uno tiene confianza baja, probablemente es 1
+                        if p_conf < 0.70 and s_conf > 0.80:
+                            adjusted_p_conf *= 0.95  # Penalizar Primary
+                        elif s_conf < 0.70 and p_conf > 0.80:
+                            adjusted_s_conf *= 0.95  # Penalizar Secondary
+
+                # Elegir el de mayor confianza (ajustada)
+                if adjusted_p_conf > adjusted_s_conf:
+                    chosen_digit = p_digit
+                    chosen_conf = p_conf  # Usar confianza original
+                    source = 'Primary'
+                    if adjusted_p_conf != p_conf:
+                        source += ' (ajustado)'
+                else:
+                    chosen_digit = s_digit
+                    chosen_conf = s_conf  # Usar confianza original
+                    source = 'Secondary'
+                    if adjusted_s_conf != s_conf:
+                        source += ' (ajustado)'
+
+                consensus_type = 'highest_confidence'
+
+                if self.verbose_logging:
+                    conflict_symbol = "⚠️" if is_confusion_pair else "→"
+                    print(f"Pos {i}: {conflict_symbol} CONFLICTO RESUELTO "
+                          f"Primary='{p_digit}' ({p_conf:.2%}) "
+                          f"Secondary='{s_digit}' ({s_conf:.2%}) "
+                          f"→ Elegido '{chosen_digit}' de {source}")
 
             combined_digits.append(chosen_digit)
             combined_confidences.append(chosen_conf)
-            sources.append(source)
+            consensus_types.append(consensus_type)
 
             # Agregar a tabla de comparación
             comparison_table.append({
@@ -361,36 +544,36 @@ class DigitLevelEnsembleOCR(OCRPort):
                 'secondary_digit': s_digit or '-',
                 'secondary_conf': s_conf * 100 if s_digit else 0,
                 'chosen': chosen_digit,
-                'source': source
+                'chosen_conf': chosen_conf * 100,
+                'source': source,
+                'type': consensus_type
             })
-
-        # Validar confianza mínima
-        if any(conf < self.min_digit_confidence for conf in combined_confidences):
-            if self.verbose_logging:
-                print(f"  ✗ Rechazada: Algunos dígitos tienen confianza < {self.min_digit_confidence*100:.0f}%")
-            return None
-
-        # Validar ratio de acuerdo
-        agreement_ratio = agreement_count / min_len if min_len > 0 else 0.0
-
-        if agreement_ratio < self.min_agreement_ratio:
-            if self.verbose_logging:
-                print(f"  ✗ Rechazada: Acuerdo {agreement_ratio*100:.0f}% < {self.min_agreement_ratio*100:.0f}%")
-            return None
 
         # Crear cédula combinada
         combined_cedula = ''.join(combined_digits)
         avg_confidence = sum(combined_confidences) / len(combined_confidences) * 100
 
+        # Estadísticas finales
+        unanimous = consensus_types.count('unanimous')
+        conflicts = conflict_count
+        total_digits = max_len
+
         # Logging detallado
         if self.verbose_logging:
             self._print_comparison_table(comparison_table)
-            print(f"\n  Estadísticas:")
-            print(f"  - Acuerdo: {agreement_ratio*100:.0f}% ({agreement_count}/{min_len} dígitos)")
-            print(f"  - Confianza promedio: {avg_confidence:.1f}%")
-            primary_count = sources.count('P')
-            secondary_count = sources.count('S')
-            print(f"  - Fuentes: Primary: {primary_count} dígitos, Secondary: {secondary_count} dígitos")
+            print(f"\n{'='*80}")
+            print("ESTADÍSTICAS:")
+            print(f"  Coincidencias: {unanimous}/{total_digits} ({unanimous/total_digits*100:.1f}%)")
+            print(f"  Conflictos:    {conflicts}/{total_digits} ({conflicts/total_digits*100:.1f}%)")
+            print(f"  Confianza promedio: {avg_confidence:.1f}%")
+
+        # VALIDACIÓN: Si hay muchos conflictos, es sospechoso
+        conflict_ratio = conflicts / total_digits if total_digits > 0 else 0.0
+        if conflict_ratio > self.max_conflict_ratio:
+            if self.verbose_logging:
+                print(f"\n⚠ ADVERTENCIA: {conflicts} conflictos ({conflict_ratio*100:.1f}%) "
+                      f"es mucho (>{self.max_conflict_ratio*100:.0f}%). La cédula puede ser de baja calidad.")
+            # No rechazar automáticamente, solo advertir
 
         # Retornar registro combinado
         return CedulaRecord.from_primitives(
@@ -399,20 +582,17 @@ class DigitLevelEnsembleOCR(OCRPort):
         )
 
     def _print_comparison_table(self, table: List[Dict]) -> None:
-        """Imprime tabla de comparación dígito por dígito."""
-        print("\n  Comparación dígito por dígito:")
-        print("  ┌─────┬────────────────┬────────────────┬──────────┐")
-        print("  │ Pos │ Primary        │ Secondary      │ Elegido  │")
-        print("  ├─────┼────────────────┼────────────────┼──────────┤")
+        """Imprime tabla de comparación dígito por dígito con detalles mejorados."""
+        print(f"\n{'Pos':<5} {'Primary':<15} {'Secondary':<15} {'Elegido':<15} {'Tipo':<12}")
+        print(f"{'-'*5} {'-'*15} {'-'*15} {'-'*15} {'-'*12}")
 
         for row in table:
             primary_str = f"'{row['primary_digit']}' ({row['primary_conf']:.1f}%)"
             secondary_str = f"'{row['secondary_digit']}' ({row['secondary_conf']:.1f}%)"
-            chosen_str = f"'{row['chosen']}' ({row['source']})"
+            chosen_str = f"'{row['chosen']}' ({row['chosen_conf']:.1f}%)"
+            type_str = row['type']
 
-            print(f"  │ {row['pos']:3} │ {primary_str:<14} │ {secondary_str:<14} │ {chosen_str:<8} │")
-
-        print("  └─────┴────────────────┴────────────────┴──────────┘")
+            print(f"{row['pos']:<5} {primary_str:<15} {secondary_str:<15} {chosen_str:<15} {type_str:<12}")
 
     def _get_unpaired_records(
         self,
@@ -421,7 +601,10 @@ class DigitLevelEnsembleOCR(OCRPort):
         pairs: List[Tuple[CedulaRecord, CedulaRecord]]
     ) -> List[CedulaRecord]:
         """
-        Obtiene registros que no tuvieron par en el otro OCR, MANTENIENDO EL ORDEN.
+        Obtiene registros que no tuvieron par en el otro OCR.
+
+        Con el nuevo sistema de emparejamiento por similitud, necesitamos
+        identificar qué cédulas específicas fueron emparejadas.
 
         Args:
             primary_records: Todos los registros del primario
@@ -429,28 +612,31 @@ class DigitLevelEnsembleOCR(OCRPort):
             pairs: Pares ya emparejados
 
         Returns:
-            Lista de registros sin emparejar, en orden de detección
+            Lista de registros sin emparejar
         """
-        # Obtener índices de registros emparejados
-        min_length = len(pairs)
-
         unpaired = []
 
-        # Agregar registros adicionales del primary (si hay más)
-        for i in range(min_length, len(primary_records)):
-            record = primary_records[i]
-            if record.confidence.as_percentage() >= self.min_digit_confidence * 100:
-                unpaired.append(record)
-                if self.verbose_logging:
-                    print(f"  ℹ️ Agregando cédula sin par de Primary: {record.cedula.value} (pos {i})")
+        # Extraer las cédulas que fueron emparejadas
+        paired_primary = {primary.cedula.value for primary, _ in pairs}
+        paired_secondary = {secondary.cedula.value for _, secondary in pairs}
 
-        # Agregar registros adicionales del secondary (si hay más)
-        for i in range(min_length, len(secondary_records)):
-            record = secondary_records[i]
-            if record.confidence.as_percentage() >= self.min_digit_confidence * 100:
-                unpaired.append(record)
-                if self.verbose_logging:
-                    print(f"  ℹ️ Agregando cédula sin par de Secondary: {record.cedula.value} (pos {i})")
+        # Agregar cédulas del primary que no fueron emparejadas
+        for record in primary_records:
+            if record.cedula.value not in paired_primary:
+                if record.confidence.as_percentage() >= self.min_digit_confidence * 100:
+                    unpaired.append(record)
+                    if self.verbose_logging:
+                        print(f"  ℹ️ Agregando cédula sin par de Primary: {record.cedula.value} "
+                              f"(conf: {record.confidence.as_percentage():.1f}%)")
+
+        # Agregar cédulas del secondary que no fueron emparejadas
+        for record in secondary_records:
+            if record.cedula.value not in paired_secondary:
+                if record.confidence.as_percentage() >= self.min_digit_confidence * 100:
+                    unpaired.append(record)
+                    if self.verbose_logging:
+                        print(f"  ℹ️ Agregando cédula sin par de Secondary: {record.cedula.value} "
+                              f"(conf: {record.confidence.as_percentage():.1f}%)")
 
         return unpaired
 

@@ -29,18 +29,6 @@ except Exception:
     DIGIT_ENSEMBLE_AVAILABLE = False
 
 try:
-    from .aws_textract_adapter import AWSTextractAdapter
-    AWS_TEXTRACT_AVAILABLE = True
-except Exception:
-    AWS_TEXTRACT_AVAILABLE = False
-
-try:
-    from .triple_ensemble_ocr import TripleEnsembleOCR
-    TRIPLE_ENSEMBLE_AVAILABLE = True
-except Exception:
-    TRIPLE_ENSEMBLE_AVAILABLE = False
-
-try:
     from .easyocr_adapter import EasyOCRAdapter
     EASYOCR_AVAILABLE = True
 except Exception:
@@ -77,9 +65,3 @@ if EASYOCR_AVAILABLE:
 
 if PADDLEOCR_AVAILABLE:
     __all__.append('PaddleOCRAdapter')
-
-if AWS_TEXTRACT_AVAILABLE:
-    __all__.append('AWSTextractAdapter')
-
-if TRIPLE_ENSEMBLE_AVAILABLE:
-    __all__.append('TripleEnsembleOCR')

@@ -3,10 +3,10 @@ automation:
   pre_enter_delay: 0.3
   typing_interval: 0.05
 capture_area:
-  height: 542
-  width: 311
-  x: 1081
-  y: 389
+  height: 567
+  width: 253
+  x: 1093
+  y: 273
 hotkeys:
   capture_area: f4
   next_record: ctrl+q
@@ -47,12 +47,6 @@ image_preprocessing:
     use_unsharp_mask: false
   upscale_factor: 2
 ocr:
-  aws_textract:
-    access_key: ${AWS_ACCESS_KEY_ID}
-    confidence_threshold: 0.4
-    max_retries: 3
-    region: us-east-1
-    secret_key: ${AWS_SECRET_ACCESS_KEY}
   azure_vision:
     api_version: '2024-02-01'
     confidence_threshold: 0.85
@@ -61,8 +55,11 @@ ocr:
     subscription_key: ${AZURE_VISION_KEY}
     timeout: 30
   digit_ensemble:
+    ambiguity_threshold: 0.1
+    confidence_boost: 0.03
+    max_conflict_ratio: 0.3
     min_agreement_ratio: 0.6
-    min_digit_confidence: 0.7
+    min_digit_confidence: 0.65
     verbose_logging: true
   ensemble:
     log_discrepancies: true
@@ -74,7 +71,7 @@ ocr:
   language: spa
   min_confidence: 85.0
   paddle_lang: es
-  provider: triple_ensemble
+  provider: digit_ensemble
   psm: 6
   tesseract:
     field_regions:
@@ -98,11 +95,6 @@ ocr:
         width: 561
         x: 42
         y: 139
-  triple_ensemble:
-    low_confidence_threshold: 0.8
-    min_agreement_ratio: 0.6
-    min_digit_confidence: 0.45
-    verbose_logging: true
 search_field:
   x: null
   y: null

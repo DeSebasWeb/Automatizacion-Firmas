@@ -113,55 +113,20 @@ def _try_create_provider(provider: str, config: ConfigPort) -> Optional[OCRPort]
             from .digit_level_ensemble_ocr import DigitLevelEnsembleOCR
 
             print("→ Inicializando Digit-Level Ensemble OCR...")
-            print("   Creando Google Vision adapter...")
-            google = GoogleVisionAdapter(config)
-            print("   Creando Azure Vision adapter...")
+            print("   Creando Azure Vision adapter (Primary)...")
             azure = AzureVisionAdapter(config)
+            print("   Creando Google Vision adapter (Secondary)...")
+            google = GoogleVisionAdapter(config)
             print("   Combinando ambos con lógica de votación por dígito...")
 
             adapter = DigitLevelEnsembleOCR(
                 config=config,
-                primary_ocr=google,
-                secondary_ocr=azure
+                primary_ocr=azure,      # Azure como primary (mejor precisión)
+                secondary_ocr=google    # Google como secondary
             )
             print("✓ Digit-Level Ensemble listo (ULTRA precisión 98-99.5%)")
             print("⚠️ Doble costo: usa ambas APIs simultáneamente")
             print("🎯 Combina lo mejor de cada OCR en cada posición de dígito")
-            return adapter
-
-        elif provider == 'aws_textract':
-            from .aws_textract_adapter import AWSTextractAdapter
-            print("→ Inicializando AWS Textract...")
-            adapter = AWSTextractAdapter(config)
-            print("✓ AWS Textract listo")
-            print("💰 1,000 páginas gratis/mes x 3 meses = 15,000 cédulas gratis/mes")
-            return adapter
-
-        elif provider == 'triple_ensemble':
-            from .google_vision_adapter import GoogleVisionAdapter
-            from .azure_vision_adapter import AzureVisionAdapter
-            from .aws_textract_adapter import AWSTextractAdapter
-            from .triple_ensemble_ocr import TripleEnsembleOCR
-
-            print("→ Inicializando Triple Ensemble OCR (Google + Azure + AWS)...")
-            print("   Creando Google Vision adapter...")
-            google = GoogleVisionAdapter(config)
-            print("   Creando Azure Vision adapter...")
-            azure = AzureVisionAdapter(config)
-            print("   Creando AWS Textract adapter...")
-            aws = AWSTextractAdapter(config)
-            print("   Combinando los 3 con votación 3-way por dígito...")
-
-            adapter = TripleEnsembleOCR(
-                config=config,
-                google_ocr=google,
-                azure_ocr=azure,
-                aws_ocr=aws
-            )
-            print("✓ Triple Ensemble listo (MÁXIMA precisión 99.5-99.8%)")
-            print("⚠️ Triple costo: usa las 3 APIs simultáneamente")
-            print("🎯 Votación 3-way elimina prácticamente todos los errores")
-            print("🎯 Ideal para conseguir inversión y vender como SaaS")
             return adapter
 
         elif provider == 'tesseract':
@@ -210,13 +175,6 @@ def get_available_providers() -> list:
     except ImportError:
         pass
 
-    # Verificar AWS Textract
-    try:
-        import boto3
-        available.append('aws_textract')
-    except ImportError:
-        pass
-
     # Verificar Tesseract
     try:
         import pytesseract
@@ -224,14 +182,10 @@ def get_available_providers() -> list:
     except ImportError:
         pass
 
-    # Ensemble solo si hay al menos 2 proveedores
-    if len(available) >= 2:
+    # Ensemble solo si hay Google Vision y Azure Vision
+    if 'google_vision' in available and 'azure_vision' in available:
         available.append('ensemble')
         available.append('digit_ensemble')
-
-    # Triple Ensemble solo si hay al menos 3 proveedores (Google + Azure + AWS)
-    if 'google_vision' in available and 'azure_vision' in available and 'aws_textract' in available:
-        available.append('triple_ensemble')
 
     return available
 
@@ -249,20 +203,17 @@ def print_provider_comparison():
     print(f"{'Proveedor':<22} {'Precisión':<15} {'Costo/1000 imgs':<20} {'Velocidad':<15}")
     print("-" * 80)
     print(f"{'Google Vision':<22} {'95-98%':<15} {'$5.16 COP':<20} {'1-2 seg':<15}")
-    print(f"{'Azure Vision':<22} {'95-98%':<15} {'$4,200 COP':<20} {'1-2 seg':<15}")
-    print(f"{'AWS Textract':<22} {'95-98%':<15} {'$6,450 COP':<20} {'1-2 seg':<15}")
+    print(f"{'Azure Vision':<22} {'96-98%':<15} {'$4,200 COP':<20} {'1-2 seg':<15}")
     print(f"{'Ensemble':<22} {'>99%':<15} {'$9,360 COP':<20} {'2-3 seg':<15}")
-    print(f"{'Digit Ensemble':<22} {'98-99.5%':<15} {'$9,360 COP':<20} {'2-3 seg':<15}")
-    print(f"{'Triple Ensemble ⭐⭐':<22} {'99.5-99.8%':<15} {'$15,816 COP':<20} {'3-4 seg':<15}")
+    print(f"{'Digit Ensemble ⭐':<22} {'98-99.5%':<15} {'$9,360 COP':<20} {'2-3 seg':<15}")
     print(f"{'Tesseract':<22} {'70-85%':<15} {'Gratis':<20} {'0.5-1 seg':<15}")
     print("-" * 80)
     print()
     print("💡 Recomendaciones:")
-    print("   • MÁXIMA PRECISIÓN: Triple Ensemble ⭐⭐ (votación 3-way, 99.5-99.8%)")
+    print("   • MÁXIMA PRECISIÓN: Digit Ensemble ⭐ (votación dígito por dígito, 98-99.5%)")
     print("   • Producción: Google Vision (mejor relación precisión/costo)")
     print("   • Comparación: Azure Vision (validar cuál da mejor precisión)")
-    print("   • Alta precisión: Digit Ensemble (combina 2 OCR por dígito, 98-99.5%)")
-    print("   • Tercera opinión: AWS Textract (para triple ensemble)")
+    print("   • Alta precisión: Ensemble (combina cédulas completas, >99%)")
     print("   • Desarrollo: Tesseract (gratis, pero menor precisión)")
     print()
     print("Proveedores disponibles en este sistema:")
