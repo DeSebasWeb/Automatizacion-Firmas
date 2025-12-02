@@ -1,0 +1,653 @@
+# Prompt para Claude Code: Extraer Pares Nombre-Cédula con Post-procesamiento + Proximidad Espacial
+
+## 🎯 OBJETIVO
+
+Necesito extraer pares nombre-cédula de formularios con el siguiente flujo:
+
+1. **Extraer TODO el texto con coordenadas espaciales (x, y)**
+2. **Post-procesamiento de nombres** (filtrar y limpiar)
+3. **Post-procesamiento de cédulas** (ya existe, mantenerlo)
+4. **Emparejar por proximidad espacial** (NO por índice)
+
+### ¿Por qué NO emparejar por índice?
+
+**Problema:**
+```
+Google extrae:  13 cédulas
+Azure extrae:   15 cédulas
+
+Si emparejo por índice:
+  nombres[0] ↔ cedulas[0]  ← Puede ser incorrecto
+  nombres[1] ↔ cedulas[1]  ← Puede ser de otra persona
+```
+
+**Solución con proximidad espacial:**
+```
+Para cada cédula en posición (x=320, y=105):
+  Buscar el nombre MÁS CERCANO espacialmente
+  → Emparejar correctamente sin importar el orden
+```
+
+---
+
+## 🏗️ ARQUITECTURA DE LA SOLUCIÓN
+
+### Flujo Completo:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 1. EXTRACCIÓN CON COORDENADAS                               │
+│    OCR.extract_text_with_positions(image)                   │
+│    → [                                                       │
+│        {text: "Juan Lopez", x: 100, y: 100, w: 200, h: 30}, │
+│        {text: "1013112859", x: 320, y: 105, w: 150, h: 25}  │
+│      ]                                                       │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 2. POST-PROCESAMIENTO                                       │
+│    nombres = filter_and_clean_nombres(blocks)               │
+│    → [{text: "Juan Lopez", x: 100, y: 100, ...}]           │
+│                                                              │
+│    cedulas = filter_and_clean_cedulas(blocks)               │
+│    → [{text: "1013112859", x: 320, y: 105, ...}]           │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 3. EMPAREJAMIENTO POR PROXIMIDAD                            │
+│    Para cada cédula:                                        │
+│      - Calcular distancia a todos los nombres               │
+│      - Elegir el NOMBRE MÁS CERCANO                         │
+│      - Emparejar: nombre ↔ cédula                           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📋 TAREAS DE IMPLEMENTACIÓN
+
+### TAREA 1: Actualizar GoogleVisionAdapter
+
+**Archivo:** `src/infrastructure/ocr/google_vision_adapter.py`
+
+#### 1.1 Agregar método auxiliar: `_extract_text_blocks_with_positions()`
+
+**Ya está en el prompt anterior, MANTENERLO.**
+
+Este método extrae bloques de texto con coordenadas (x, y, width, height).
+
+#### 1.2 Agregar funciones de post-procesamiento
+
+```python
+def _filter_nombres(self, blocks: List[Dict]) -> List[Dict]:
+    """
+    Filtra bloques que son nombres.
+    
+    Post-procesamiento aplicado:
+    1. Identificar si es nombre (letras, > 10 chars, >= 2 palabras)
+    2. Limpiar texto (capitalizar, normalizar)
+    3. Mantener coordenadas originales
+    
+    Args:
+        blocks: Lista de bloques con {text, x, y, width, height, confidence}
+        
+    Returns:
+        Lista de bloques que son nombres, post-procesados
+    """
+    nombres = []
+    nombre_buffer = []
+    
+    # Ordenar bloques por posición (top→bottom, left→right)
+    sorted_blocks = sorted(blocks, key=lambda b: (b['y'], b['x']))
+    
+    for block in sorted_blocks:
+        text = block['text']
+        
+        # ¿Es parte de un nombre?
+        if self._is_nombre_pattern(text):
+            nombre_buffer.append(block)
+        else:
+            # No es nombre, guardar buffer si existe
+            if nombre_buffer:
+                merged = self._merge_nombre_blocks(nombre_buffer)
+                if merged:
+                    nombres.append(merged)
+                nombre_buffer = []
+    
+    # Guardar último buffer
+    if nombre_buffer:
+        merged = self._merge_nombre_blocks(nombre_buffer)
+        if merged:
+            nombres.append(merged)
+    
+    return nombres
+
+def _filter_cedulas(self, blocks: List[Dict]) -> List[Dict]:
+    """
+    Filtra bloques que son cédulas.
+    
+    Post-procesamiento aplicado:
+    1. Identificar si es cédula (números, 7-10 dígitos)
+    2. Limpiar (remover puntos, espacios)
+    3. Mantener coordenadas originales
+    
+    Args:
+        blocks: Lista de bloques con texto y coordenadas
+        
+    Returns:
+        Lista de bloques que son cédulas, post-procesadas
+    """
+    cedulas = []
+    
+    for block in blocks:
+        text = block['text']
+        
+        # Remover todo excepto dígitos
+        cleaned = re.sub(r'[^\d]', '', text)
+        
+        # Validar longitud (cédulas colombianas: 7-10 dígitos)
+        if 7 <= len(cleaned) <= 10:
+            cedulas.append({
+                'text': cleaned,  # Texto limpio
+                'x': block['x'],
+                'y': block['y'],
+                'width': block['width'],
+                'height': block['height'],
+                'confidence': block['confidence']
+            })
+    
+    return cedulas
+
+def _is_nombre_pattern(self, text: str) -> bool:
+    """
+    Determina si un texto parece ser parte de un nombre.
+    
+    Criterios:
+    - Principalmente letras (> 70%)
+    - No es solo números
+    - Puede tener espacios, acentos, ñ
+    """
+    if not text or len(text) < 2:
+        return False
+    
+    # Contar letras
+    letter_count = sum(1 for c in text if c.isalpha() or c.isspace())
+    letter_ratio = letter_count / len(text) if text else 0
+    
+    # Debe ser principalmente letras
+    if letter_ratio < 0.7:
+        return False
+    
+    # No debe ser solo números
+    if text.replace(" ", "").isdigit():
+        return False
+    
+    return True
+
+def _merge_nombre_blocks(self, blocks: List[Dict]) -> Optional[Dict]:
+    """
+    Combina múltiples bloques que forman un nombre completo.
+    
+    Ejemplo:
+      Block 1: "Juan Sebastian" (x=100, y=100)
+      Block 2: "Lopez Hernandez" (x=100, y=130)
+      → Merged: "Juan Sebastian Lopez Hernandez" (x=100, y=100, height=60)
+    
+    Args:
+        blocks: Lista de bloques consecutivos que forman un nombre
+        
+    Returns:
+        Bloque merged o None si no es válido
+    """
+    if not blocks:
+        return None
+    
+    # Concatenar textos
+    full_text = ' '.join(b['text'] for b in blocks)
+    full_text = ' '.join(full_text.split())  # Normalizar espacios
+    
+    # Validar que es un nombre completo válido
+    if not self._is_valid_nombre(full_text):
+        return None
+    
+    # Formatear (Title Case)
+    formatted_text = self._format_nombre(full_text)
+    
+    # Calcular bounding box combinado
+    min_x = min(b['x'] for b in blocks)
+    min_y = min(b['y'] for b in blocks)
+    max_x = max(b['x'] + b['width'] for b in blocks)
+    max_y = max(b['y'] + b['height'] for b in blocks)
+    
+    # Confianza promedio
+    avg_confidence = sum(b['confidence'] for b in blocks) / len(blocks)
+    
+    return {
+        'text': formatted_text,
+        'x': min_x,
+        'y': min_y,
+        'width': max_x - min_x,
+        'height': max_y - min_y,
+        'confidence': avg_confidence
+    }
+
+def _is_valid_nombre(self, text: str) -> bool:
+    """
+    Verifica si es un nombre completo válido.
+    
+    Criterios:
+    - Longitud >= 10 caracteres
+    - Al menos 2 palabras (nombre + apellido)
+    - Cada palabra >= 2 caracteres
+    """
+    text = text.strip()
+    
+    if len(text) < 10:
+        return False
+    
+    words = text.split()
+    if len(words) < 2:
+        return False
+    
+    if any(len(word) < 2 for word in words):
+        return False
+    
+    return True
+
+def _format_nombre(self, text: str) -> str:
+    """
+    Formatea un nombre con Title Case.
+    
+    Respeta:
+    - Nombres compuestos: "Juan Sebastian"
+    - Artículos: "de", "del", "de la"
+    """
+    words = text.split()
+    formatted = []
+    
+    lowercase_articles = {'de', 'del', 'de la', 'y', 'e', 'la', 'las', 'los'}
+    
+    for i, word in enumerate(words):
+        # Primera palabra siempre mayúscula
+        if i == 0:
+            formatted.append(word.capitalize())
+        # Artículos en minúscula (excepto al inicio)
+        elif word.lower() in lowercase_articles:
+            formatted.append(word.lower())
+        # Resto con mayúscula inicial
+        else:
+            formatted.append(word.capitalize())
+    
+    return ' '.join(formatted)
+
+def _pair_by_proximity(self, nombres: List[Dict], cedulas: List[Dict]) -> List[Dict]:
+    """
+    Empareja cada cédula con el nombre MÁS CERCANO espacialmente.
+    
+    Estrategia:
+    1. Para cada cédula, calcular distancia a todos los nombres
+    2. Elegir el nombre con menor distancia
+    3. Priorizar proximidad VERTICAL (mismo renglón) con factor 2x
+    4. Marcar nombres como usados para evitar duplicados
+    
+    Args:
+        nombres: Lista de bloques de nombres con coordenadas
+        cedulas: Lista de bloques de cédulas con coordenadas
+        
+    Returns:
+        Lista de pares nombre-cédula
+    """
+    import math
+    
+    pares = []
+    used_nombres = set()
+    
+    # Ordenar cédulas por posición vertical (top → bottom)
+    cedulas_sorted = sorted(cedulas, key=lambda c: c['y'])
+    
+    for cedula in cedulas_sorted:
+        # Centro de la cédula
+        cedula_cx = cedula['x'] + cedula['width'] / 2
+        cedula_cy = cedula['y'] + cedula['height'] / 2
+        
+        best_nombre = None
+        best_distance = float('inf')
+        
+        for nombre in nombres:
+            # Skip si ya fue usado
+            if nombre['text'] in used_nombres:
+                continue
+            
+            # Centro del nombre
+            nombre_cx = nombre['x'] + nombre['width'] / 2
+            nombre_cy = nombre['y'] + nombre['height'] / 2
+            
+            # Calcular distancia
+            # IMPORTANTE: Dar más peso a la distancia vertical (factor 2x)
+            # porque en formularios, nombre y cédula están en el mismo renglón
+            dx = cedula_cx - nombre_cx
+            dy = (cedula_cy - nombre_cy) * 2  # Peso 2x en Y
+            
+            distance = math.sqrt(dx**2 + dy**2)
+            
+            # Penalizar si el nombre está MUY ABAJO de la cédula
+            # (normalmente el nombre va antes/arriba de la cédula)
+            if nombre_cy > cedula_cy + 50:  # Nombre 50px+ abajo
+                distance *= 2  # Penalizar 2x
+            
+            # Penalizar si están MUY LEJOS horizontalmente
+            # (mismo renglón implica distancia horizontal razonable)
+            if abs(dx) > 500:  # Más de 500px de separación horizontal
+                distance *= 1.5  # Penalizar 1.5x
+            
+            if distance < best_distance:
+                best_distance = distance
+                best_nombre = nombre
+        
+        # Empareja si encontró nombre cercano (< 300 pixels)
+        if best_nombre and best_distance < 300:
+            pares.append({
+                'nombre': best_nombre['text'],
+                'cedula': cedula['text'],
+                'confidence_nombre': best_nombre['confidence'],
+                'confidence_cedula': cedula['confidence'],
+                'distance_pixels': int(best_distance),
+                'nombre_coords': {
+                    'x': best_nombre['x'],
+                    'y': best_nombre['y']
+                },
+                'cedula_coords': {
+                    'x': cedula['x'],
+                    'y': cedula['y']
+                }
+            })
+            
+            used_nombres.add(best_nombre['text'])
+            
+            self.logger.debug(
+                f"✓ Emparejado: '{best_nombre['text']}' ↔ '{cedula['text']}' "
+                f"(distancia: {best_distance:.0f}px)"
+            )
+        else:
+            self.logger.warning(
+                f"⚠ Cédula '{cedula['text']}' sin nombre cercano "
+                f"(distancia mínima: {best_distance:.0f}px)"
+            )
+    
+    return pares
+```
+
+#### 1.3 Implementar método principal
+
+```python
+def extract_name_cedula_pairs(self, image: Image.Image) -> List[Dict[str, str]]:
+    """
+    Extrae pares nombre-cédula usando post-procesamiento + proximidad espacial.
+    
+    Flujo:
+    1. Extraer TODO el texto con coordenadas
+    2. Post-procesamiento: filtrar nombres
+    3. Post-procesamiento: filtrar cédulas
+    4. Emparejar por proximidad espacial
+    
+    Returns:
+        Lista de pares nombre-cédula correctamente emparejados
+    """
+    self.logger.info("\n" + "="*80)
+    self.logger.info("GOOGLE VISION: Extracción de pares nombre-cédula")
+    self.logger.info("="*80)
+    
+    # 1. Preprocesar imagen
+    processed_image = self.preprocessor.preprocess(image)
+    
+    # 2. Extraer TODO el texto con coordenadas
+    self.logger.info("[1/4] Extrayendo texto con coordenadas...")
+    content = self._pil_to_bytes(processed_image)
+    vision_image = vision.Image(content=content)
+    
+    response = self.client.document_text_detection(image=vision_image)
+    self.last_raw_response = response
+    
+    if response.error.message:
+        raise Exception(f"Google Vision error: {response.error.message}")
+    
+    # Extraer bloques con posiciones
+    all_blocks = self._extract_text_blocks_with_positions(response)
+    self.logger.info(f"  ✓ Extraídos {len(all_blocks)} bloques de texto")
+    
+    # 3. Post-procesamiento: filtrar nombres
+    self.logger.info("[2/4] Post-procesando nombres...")
+    nombres = self._filter_nombres(all_blocks)
+    self.logger.info(f"  ✓ Detectados {len(nombres)} nombres")
+    for n in nombres:
+        self.logger.debug(f"    - {n['text']} (conf: {n['confidence']:.2%})")
+    
+    # 4. Post-procesamiento: filtrar cédulas
+    self.logger.info("[3/4] Post-procesando cédulas...")
+    cedulas = self._filter_cedulas(all_blocks)
+    self.logger.info(f"  ✓ Detectadas {len(cedulas)} cédulas")
+    for c in cedulas:
+        self.logger.debug(f"    - {c['text']} (conf: {c['confidence']:.2%})")
+    
+    # 5. Emparejar por proximidad espacial
+    self.logger.info("[4/4] Emparejando por proximidad espacial...")
+    pares = self._pair_by_proximity(nombres, cedulas)
+    self.logger.info(f"  ✓ Emparejados {len(pares)} pares")
+    
+    self.logger.info("="*80 + "\n")
+    
+    return pares
+```
+
+---
+
+### TAREA 2: Implementar Igual en AzureVisionAdapter
+
+**Archivo:** `src/infrastructure/ocr/azure_vision_adapter.py`
+
+**Implementar los mismos métodos:**
+- `_extract_text_blocks_with_positions()` (adaptado a Azure Read API)
+- `_filter_nombres()`
+- `_filter_cedulas()`
+- `_pair_by_proximity()`
+- `extract_name_cedula_pairs()`
+
+**Diferencia clave:**
+Azure Read API retorna estructura diferente:
+```python
+result.analyze_result.read_results[].lines[]
+# Cada line tiene: text, bounding_box, words[]
+```
+
+---
+
+### TAREA 3: Implementar Ensemble
+
+**Archivo:** `src/infrastructure/ocr/digit_level_ensemble_ocr.py`
+
+```python
+def extract_name_cedula_pairs(self, image: Image.Image) -> List[Dict[str, str]]:
+    """
+    Extrae pares nombre-cédula usando ensemble de Google + Azure.
+    
+    Estrategia:
+    1. Ambos OCR extraen sus pares independientemente
+    2. Emparejar pares similares entre Google y Azure
+    3. Para cada par:
+       - Nombre: usar el de mayor confianza
+       - Cédula: usar ensemble por dígito (ya implementado)
+    """
+    
+    self.logger.info("\n" + "="*80)
+    self.logger.info("DUAL ENSEMBLE: Extracción de pares nombre-cédula")
+    self.logger.info("="*80)
+    
+    # Ejecutar ambos OCR
+    google_pairs = self.primary_ocr.extract_name_cedula_pairs(image)
+    azure_pairs = self.secondary_ocr.extract_name_cedula_pairs(image)
+    
+    self.logger.info(f"Google: {len(google_pairs)} pares")
+    self.logger.info(f"Azure:  {len(azure_pairs)} pares")
+    
+    # Emparejar pares similares
+    matched = self._match_pairs(google_pairs, azure_pairs)
+    self.logger.info(f"Emparejados: {len(matched)} pares\n")
+    
+    # Combinar información
+    final_pairs = []
+    
+    for idx, (g_pair, a_pair) in enumerate(matched, 1):
+        self.logger.info(f"[Par {idx}/{len(matched)}]")
+        self.logger.info(f"  Google: {g_pair['nombre']} → {g_pair['cedula']}")
+        self.logger.info(f"  Azure:  {a_pair['nombre']} → {a_pair['cedula']}")
+        
+        # NOMBRE: usar el de mayor confianza
+        if g_pair['confidence_nombre'] >= a_pair['confidence_nombre']:
+            final_nombre = g_pair['nombre']
+            conf_nombre = g_pair['confidence_nombre']
+            nombre_source = 'Google'
+        else:
+            final_nombre = a_pair['nombre']
+            conf_nombre = a_pair['confidence_nombre']
+            nombre_source = 'Azure'
+        
+        # CÉDULA: usar ensemble por dígito si difieren
+        if g_pair['cedula'] == a_pair['cedula']:
+            final_cedula = g_pair['cedula']
+            conf_cedula = (g_pair['confidence_cedula'] + a_pair['confidence_cedula']) / 2
+            cedula_source = 'Ambos'
+        else:
+            # Usar ensemble por dígito (tu implementación existente)
+            combined = self._combine_cedulas_by_digit(
+                g_pair['cedula'],
+                a_pair['cedula'],
+                g_pair['confidence_cedula'],
+                a_pair['confidence_cedula']
+            )
+            
+            final_cedula = combined['cedula']
+            conf_cedula = combined['confidence']
+            cedula_source = 'Ensemble'
+        
+        self.logger.info(f"  → FINAL: {final_nombre} → {final_cedula}")
+        self.logger.info(f"    Nombre de {nombre_source} (conf: {conf_nombre:.2%})")
+        self.logger.info(f"    Cédula de {cedula_source} (conf: {conf_cedula:.2%})\n")
+        
+        final_pairs.append({
+            'nombre': final_nombre,
+            'cedula': final_cedula,
+            'confidence_nombre': conf_nombre,
+            'confidence_cedula': conf_cedula
+        })
+    
+    self.logger.info("="*80 + "\n")
+    
+    return final_pairs
+
+def _match_pairs(self, google_pairs: List[Dict], azure_pairs: List[Dict]) -> List[Tuple]:
+    """
+    Empareja pares similares entre Google y Azure.
+    
+    Usa similitud de cédulas (más confiable que nombres).
+    """
+    from difflib import SequenceMatcher
+    
+    matched = []
+    used_azure = set()
+    
+    for g_pair in google_pairs:
+        best_match = None
+        best_similarity = 0.0
+        
+        for a_idx, a_pair in enumerate(azure_pairs):
+            if a_idx in used_azure:
+                continue
+            
+            # Similitud de cédulas (peso 80%)
+            cedula_sim = SequenceMatcher(
+                None,
+                g_pair['cedula'],
+                a_pair['cedula']
+            ).ratio()
+            
+            # Similitud de nombres (peso 20%)
+            nombre_sim = SequenceMatcher(
+                None,
+                g_pair['nombre'].lower(),
+                a_pair['nombre'].lower()
+            ).ratio()
+            
+            similarity = (cedula_sim * 0.8) + (nombre_sim * 0.2)
+            
+            if similarity > best_similarity:
+                best_similarity = similarity
+                best_match = (a_pair, a_idx)
+        
+        if best_match and best_similarity >= 0.6:
+            matched.append((g_pair, best_match[0]))
+            used_azure.add(best_match[1])
+    
+    return matched
+```
+
+---
+
+## ✅ CRITERIOS DE ÉXITO
+
+1. ✅ **Extrae texto con coordenadas espaciales**
+2. ✅ **Post-procesamiento efectivo** de nombres y cédulas
+3. ✅ **Emparejamiento correcto** por proximidad (NO por índice)
+4. ✅ **Funciona aunque Google encuentre 13 y Azure 15**
+5. ✅ **Logging claro** de cada paso
+6. ✅ **No se pierden pares** por desincronización de índices
+
+---
+
+## 📊 EJEMPLO DE OUTPUT
+
+```
+================================================================================
+DUAL ENSEMBLE: Extracción de pares nombre-cédula
+================================================================================
+
+GOOGLE VISION: Extracción de pares nombre-cédula
+================================================================================
+[1/4] Extrayendo texto con coordenadas...
+  ✓ Extraídos 47 bloques de texto
+[2/4] Post-procesando nombres...
+  ✓ Detectados 3 nombres
+    - Juan Sebastian Lopez Hernandez (conf: 96%)
+    - Maria Garcia Perez (conf: 94%)
+    - Carlos Andres Martinez (conf: 95%)
+[3/4] Post-procesando cédulas...
+  ✓ Detectadas 3 cédulas
+    - 1013112859 (conf: 97%)
+    - 51723468 (conf: 95%)
+    - 1036221525 (conf: 96%)
+[4/4] Emparejando por proximidad espacial...
+  ✓ Emparejado: 'Juan Sebastian Lopez Hernandez' ↔ '1013112859' (distancia: 45px)
+  ✓ Emparejado: 'Maria Garcia Perez' ↔ '51723468' (distancia: 52px)
+  ✓ Emparejado: 'Carlos Andres Martinez' ↔ '1036221525' (distancia: 48px)
+  ✓ Emparejados 3 pares
+================================================================================
+
+[Similar output para Azure...]
+
+Google: 3 pares
+Azure:  3 pares
+Emparejados: 3 pares
+
+[Par 1/3]
+  Google: Juan Sebastian Lopez Hernandez → 1013112859
+  Azure:  Juan Sebastian Lopez Hernandez → 1013112859
+  → FINAL: Juan Sebastian Lopez Hernandez → 1013112859
+    Nombre de Google (conf: 96%)
+    Cédula de Ambos (conf: 97%)
+
+[Similar para pares 2 y 3...]
+================================================================================
+```
+
+---
+
+**Claude Code: Implementa extracción de pares nombre-cédula usando post-procesamiento + proximidad espacial. NO usar índices para emparejar.** 🚀

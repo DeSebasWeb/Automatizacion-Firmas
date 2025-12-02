@@ -991,3 +991,118 @@ class GoogleVisionAdapter(OCRPort):
             raw_text=None
         )
 
+    def _extract_text_blocks_with_positions(self, response) -> List[Dict]:
+        """
+        Extrae palabras individuales con coordenadas (NO bloques completos).
+
+        CAMBIO IMPORTANTE: Ahora extrae a nivel de PALABRA en lugar de BLOCK.
+        Esto permite que filter_nombres() agrupe correctamente nombres que están
+        separados espacialmente, evitando que Google Vision agrupe nombres diferentes
+        en un solo bloque gigante.
+
+        Args:
+            response: Respuesta de Google Vision API
+
+        Returns:
+            Lista de palabras con {text, x, y, width, height, confidence}
+        """
+        word_blocks = []
+
+        for page in response.full_text_annotation.pages:
+            for block in page.blocks:
+                for paragraph in block.paragraphs:
+                    for word in paragraph.words:
+                        # Obtener vertices de esta palabra específica
+                        vertices = word.bounding_box.vertices
+                        if not vertices or len(vertices) < 4:
+                            continue
+
+                        # Calcular bounding box de la palabra
+                        min_x = min(v.x for v in vertices)
+                        max_x = max(v.x for v in vertices)
+                        min_y = min(v.y for v in vertices)
+                        max_y = max(v.y for v in vertices)
+
+                        # Extraer texto de la palabra
+                        word_text = ''.join([symbol.text for symbol in word.symbols])
+
+                        if word_text.strip():
+                            word_blocks.append({
+                                'text': word_text.strip(),
+                                'x': min_x,
+                                'y': min_y,
+                                'width': max_x - min_x,
+                                'height': max_y - min_y,
+                                'confidence': word.confidence
+                            })
+
+        return word_blocks
+
+    def extract_name_cedula_pairs(self, image: Image.Image) -> List[Dict]:
+        """
+        Extrae pares nombre-cédula usando post-procesamiento + proximidad espacial.
+
+        Flujo:
+        1. Extraer TODO el texto con coordenadas
+        2. Post-procesamiento: filtrar nombres
+        3. Post-procesamiento: filtrar cédulas
+        4. Emparejar por proximidad espacial
+
+        Returns:
+            Lista de pares nombre-cédula correctamente emparejados
+        """
+        from .spatial_pairing import SpatialPairing
+
+        print("\n" + "="*80)
+        print("GOOGLE VISION: Extracción de pares nombre-cédula")
+        print("="*80)
+
+        # 1. Preprocesar imagen
+        processed_image = self.preprocess_image(image)
+
+        # 2. Extraer TODO el texto con coordenadas
+        print("[1/4] Extrayendo texto con coordenadas...")
+        img_byte_arr = io.BytesIO()
+        processed_image.save(img_byte_arr, format='PNG')
+        img_byte_arr = img_byte_arr.getvalue()
+
+        vision_image = vision.Image(content=img_byte_arr)
+        image_context = vision.ImageContext(language_hints=['es'])
+
+        response = self.client.document_text_detection(
+            image=vision_image,
+            image_context=image_context
+        )
+
+        self.last_raw_response = response
+
+        if response.error.message:
+            raise Exception(f"Google Vision error: {response.error.message}")
+
+        # Extraer bloques con posiciones
+        all_blocks = self._extract_text_blocks_with_positions(response)
+        print(f"  ✓ Extraídos {len(all_blocks)} bloques de texto")
+
+        # 3. Post-procesamiento: filtrar nombres
+        print("[2/4] Post-procesando nombres...")
+        nombres = SpatialPairing.filter_nombres(all_blocks)
+        print(f"  ✓ Detectados {len(nombres)} nombres")
+        for n in nombres:
+            print(f"    - {n['text']} (conf: {n['confidence']:.2%})")
+
+        # 4. Post-procesamiento: filtrar cédulas
+        print("[3/4] Post-procesando cédulas...")
+        cedulas = SpatialPairing.filter_cedulas(all_blocks)
+        print(f"  ✓ Detectadas {len(cedulas)} cédulas")
+        for c in cedulas:
+            print(f"    - {c['text']} (conf: {c['confidence']:.2%})")
+
+        # 5. Emparejar por proximidad espacial
+        print("[4/4] Emparejando por proximidad espacial...")
+        pares = SpatialPairing.pair_by_proximity(nombres, cedulas, verbose=True)
+        print(f"  ✓ Emparejados {len(pares)} pares")
+
+        print("="*80 + "\n")
+
+        return pares
+

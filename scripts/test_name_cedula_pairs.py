@@ -1,8 +1,10 @@
 """
-Script de diagnóstico para verificar el ensemble con imagen real.
+Script de prueba para extraer pares nombre-cédula con proximidad espacial.
 
-Este script permite probar el Dual Ensemble OCR (Google + Azure) con una imagen
-real y ver logs detallados de cómo funciona la votación dígito por dígito.
+Este script prueba el nuevo sistema de extracción de pares que usa:
+- Post-procesamiento inteligente de nombres y cédulas
+- Emparejamiento por proximidad espacial (NO por índice)
+- Ensemble de Google + Azure con votación por dígito
 """
 
 import sys
@@ -21,9 +23,9 @@ from src.shared.config import YAMLConfig
 
 
 def main():
-    """Función principal del script de diagnóstico."""
+    """Función principal del script de prueba."""
     print("=" * 80)
-    print("SCRIPT DE DIAGNÓSTICO - DUAL ENSEMBLE OCR")
+    print("SCRIPT DE PRUEBA - EXTRACCIÓN DE PARES NOMBRE-CÉDULA")
     print("=" * 80)
     print()
 
@@ -64,7 +66,7 @@ def main():
         print(f"  Tamaño: {image.size}")
         print(f"  Modo: {image.mode}")
 
-        # Verificar si la imagen está corrupta intentando cargarla completamente
+        # Verificar si la imagen está corrupta
         try:
             image.load()
         except Exception as load_error:
@@ -76,7 +78,7 @@ def main():
             print("  3. Usa formatos PNG o JPG estándar")
             return
 
-        # Convertir a RGB si es necesario para evitar problemas
+        # Convertir a RGB si es necesario
         if image.mode not in ('RGB', 'L'):
             print(f"  Convirtiendo de {image.mode} a RGB...")
             image = image.convert('RGB')
@@ -86,36 +88,41 @@ def main():
         print(f"✗ Error cargando imagen: {e}")
         return
 
-    # Extraer cédulas con logging detallado
+    # Extraer pares nombre-cédula
     print("=" * 80)
-    print("INICIANDO EXTRACCIÓN CON DUAL ENSEMBLE")
+    print("INICIANDO EXTRACCIÓN DE PARES")
     print("=" * 80)
     print()
 
     try:
-        cedulas = ocr.extract_cedulas(image)
+        pares = ocr.extract_name_cedula_pairs(image)
 
         print()
         print("=" * 80)
         print("RESULTADOS FINALES")
         print("=" * 80)
 
-        if cedulas:
-            print(f"✓ {len(cedulas)} cédula(s) extraída(s):")
-            for i, record in enumerate(cedulas, 1):
-                print(f"  {i}. {record.cedula.value} (confianza: {record.confidence.as_percentage():.1f}%)")
+        if pares:
+            print(f"✓ {len(pares)} par(es) extraído(s):")
+            print()
+            for i, par in enumerate(pares, 1):
+                print(f"{i}. {par['nombre']}")
+                print(f"   Cédula: {par['cedula']}")
+                print(f"   Confianza nombre: {par['confidence_nombre']:.1%}")
+                print(f"   Confianza cédula: {par['confidence_cedula']:.1%}")
+                print()
         else:
-            print("✗ No se extrajo ninguna cédula")
+            print("✗ No se extrajo ningún par")
             print()
             print("Posibles razones:")
-            print("  - Confianzas muy bajas (< 75%)")
-            print("  - Muchos conflictos ambiguos (diferencia < 10%)")
-            print("  - Imagen de mala calidad")
+            print("  - No se detectaron nombres o cédulas")
+            print("  - Los nombres y cédulas están muy separados (> 300px)")
+            print("  - Confianzas muy bajas")
             print()
             print("Sugerencias:")
-            print("  1. Mejorar iluminación/contraste de la imagen")
-            print("  2. Aumentar upscale_factor en config/settings.yaml")
-            print("  3. Verificar que el área capturada contiene solo cédulas legibles")
+            print("  1. Verificar que la imagen tenga nombres Y cédulas visibles")
+            print("  2. Asegurar buena calidad de imagen (iluminación, contraste)")
+            print("  3. Revisar logs anteriores para ver qué se detectó")
 
     except Exception as e:
         print()

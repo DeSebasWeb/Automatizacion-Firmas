@@ -115,29 +115,94 @@ class MainController(QObject):
 
             def safe_toggle_pause():
                 try:
+                    print("DEBUG: Alt+5 presionado - pausando/reanudando")
                     # Usar QTimer para ejecutar en el thread principal
                     from PyQt6.QtCore import QTimer
                     QTimer.singleShot(0, self._toggle_pause)
                 except Exception as e:
-                    self.logger.error("Error en hotkey F3", error=str(e))
-                    print(f"ERROR en F3: {e}")
+                    self.logger.error("Error en hotkey Alt+5", error=str(e))
+                    print(f"ERROR en Alt+5: {e}")
+                    import traceback
+                    traceback.print_exc()
 
             def safe_select_area():
                 try:
+                    print("DEBUG: Alt+1 presionado - seleccionando área")
                     # Usar QTimer para ejecutar en el thread principal
                     from PyQt6.QtCore import QTimer
                     QTimer.singleShot(0, self.handle_select_area)
                 except Exception as e:
-                    self.logger.error("Error en hotkey F4", error=str(e))
-                    print(f"ERROR en F4: {e}")
+                    self.logger.error("Error en hotkey Alt+1", error=str(e))
+                    print(f"ERROR en Alt+1: {e}")
+                    import traceback
+                    traceback.print_exc()
+
+            def safe_capture_screen():
+                try:
+                    print("DEBUG: Alt+2 presionado - capturando pantalla")
+                    # Usar QTimer para ejecutar en el thread principal
+                    from PyQt6.QtCore import QTimer
+                    QTimer.singleShot(0, self.handle_capture)
+                except Exception as e:
+                    self.logger.error("Error en hotkey Alt+2", error=str(e))
+                    print(f"ERROR en Alt+2: {e}")
+                    import traceback
+                    traceback.print_exc()
+
+            def safe_extract_cedulas():
+                try:
+                    print("DEBUG: Alt+3 presionado - extrayendo cédulas")
+                    # Usar QTimer para ejecutar en el thread principal
+                    from PyQt6.QtCore import QTimer
+                    QTimer.singleShot(0, self.handle_extract)
+                except Exception as e:
+                    self.logger.error("Error en hotkey Alt+3", error=str(e))
+                    print(f"ERROR en Alt+3: {e}")
+                    import traceback
+                    traceback.print_exc()
+
+            def safe_start_processing():
+                try:
+                    print("DEBUG: Alt+4 presionado - iniciando procesamiento")
+                    # Usar QTimer para ejecutar en el thread principal
+                    from PyQt6.QtCore import QTimer
+                    QTimer.singleShot(0, self.handle_start_processing)
+                except Exception as e:
+                    self.logger.error("Error en hotkey Alt+4", error=str(e))
+                    print(f"ERROR en Alt+4: {e}")
+                    import traceback
+                    traceback.print_exc()
+
+            # Registrar hotkeys
+            print("Registrando hotkeys...")
+            print("IMPORTANTE: Usando Alt+números para evitar conflictos del sistema")
 
             self.automation.register_hotkey('<ctrl>+q', safe_handle_next)
-            self.automation.register_hotkey('<f3>', safe_toggle_pause)
-            self.automation.register_hotkey('<f4>', safe_select_area)
+            print("  ✓ Ctrl+Q registrado (procesar siguiente)")
 
-            self.logger.info("Atajos de teclado registrados", hotkeys="Ctrl+Q, F3, F4")
+            self.automation.register_hotkey('<alt>+1', safe_select_area)
+            print("  ✓ Alt+1 registrado (seleccionar área)")
+
+            self.automation.register_hotkey('<alt>+2', safe_capture_screen)
+            print("  ✓ Alt+2 registrado (capturar pantalla)")
+
+            self.automation.register_hotkey('<alt>+3', safe_extract_cedulas)
+            print("  ✓ Alt+3 registrado (extraer cédulas)")
+
+            self.automation.register_hotkey('<alt>+4', safe_start_processing)
+            print("  ✓ Alt+4 registrado (iniciar procesamiento)")
+
+            self.automation.register_hotkey('<alt>+5', safe_toggle_pause)
+            print("  ✓ Alt+5 registrado (pausar/reanudar)")
+
+            self.logger.info("Atajos de teclado registrados", hotkeys="Alt+1, Alt+2, Alt+3, Alt+4, Alt+5, Ctrl+Q")
+            print("✅ Todas las hotkeys registradas correctamente")
+            print("📝 Resumen: Alt+1→Área, Alt+2→Captura, Alt+3→Extraer, Alt+4→Iniciar, Alt+5→Pausa, Ctrl+Q→Siguiente")
         except Exception as e:
             self.logger.warning("No se pudieron registrar atajos de teclado", error=str(e))
+            print(f"⚠️ ERROR al registrar hotkeys: {e}")
+            import traceback
+            traceback.print_exc()
 
     def _load_saved_area(self):
         """Intenta cargar el área guardada en configuración."""

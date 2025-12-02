@@ -1,16 +1,19 @@
 automation:
   post_enter_delay: 0.5
   pre_enter_delay: 0.3
-  typing_interval: 0.05
+  typing_interval: 0.01
 capture_area:
-  height: 567
-  width: 253
-  x: 1093
-  y: 273
+  height: 488
+  width: 259
+  x: 562
+  y: 444
 hotkeys:
-  capture_area: f4
+  capture_area: ctrl+f4
+  capture_screen: ctrl+f5
+  extract_cedulas: ctrl+f6
   next_record: ctrl+q
-  pause: f3
+  pause: ctrl+f3
+  start_processing: ctrl+f7
 image_preprocessing:
   binarize:
     enabled: false

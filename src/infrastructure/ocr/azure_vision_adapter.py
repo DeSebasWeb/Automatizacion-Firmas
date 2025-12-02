@@ -98,8 +98,17 @@ class AzureVisionAdapter(OCRPort):
         # 2. Si no están en env, intentar desde config
         if not endpoint:
             endpoint = self.config.get('ocr.azure_vision.endpoint')
+            # Expandir variables de entorno si están en formato ${VAR}
+            if endpoint and endpoint.startswith('${') and endpoint.endswith('}'):
+                var_name = endpoint[2:-1]  # Extraer nombre de variable
+                endpoint = os.getenv(var_name)
+
         if not subscription_key:
             subscription_key = self.config.get('ocr.azure_vision.subscription_key')
+            # Expandir variables de entorno si están en formato ${VAR}
+            if subscription_key and subscription_key.startswith('${') and subscription_key.endswith('}'):
+                var_name = subscription_key[2:-1]  # Extraer nombre de variable
+                subscription_key = os.getenv(var_name)
 
         # Validar que tenemos las credenciales
         if not endpoint or not subscription_key:
@@ -658,3 +667,128 @@ class AzureVisionAdapter(OCRPort):
             'average': average,
             'source': 'azure_vision'
         }
+
+    def _extract_text_blocks_with_positions(self, result) -> List[Dict]:
+        """
+        Extrae palabras individuales con coordenadas (NO líneas completas).
+
+        CAMBIO IMPORTANTE: Ahora extrae a nivel de PALABRA en lugar de LÍNEA.
+        Esto permite que filter_nombres() agrupe correctamente nombres que están
+        separados espacialmente, igual que en Google Vision.
+
+        Args:
+            result: Resultado de Azure Read API
+
+        Returns:
+            Lista de palabras con {text, x, y, width, height, confidence}
+        """
+        word_blocks = []
+
+        if not result.read or not result.read.blocks:
+            return word_blocks
+
+        for block in result.read.blocks:
+            for line in block.lines:
+                # Extraer cada palabra individual de la línea
+                if not hasattr(line, 'words') or not line.words:
+                    continue
+
+                for word in line.words:
+                    # Azure retorna polygon con 8 puntos [x1,y1, x2,y2, x3,y3, x4,y4]
+                    if not hasattr(word, 'polygon') or not word.polygon:
+                        continue
+
+                    polygon = word.polygon
+                    if len(polygon) < 8:
+                        continue
+
+                    # Extraer coordenadas x, y
+                    x_coords = [polygon[i] for i in range(0, len(polygon), 2)]
+                    y_coords = [polygon[i] for i in range(1, len(polygon), 2)]
+
+                    min_x = min(x_coords)
+                    max_x = max(x_coords)
+                    min_y = min(y_coords)
+                    max_y = max(y_coords)
+
+                    # Confianza de la palabra
+                    word_confidence = word.confidence if hasattr(word, 'confidence') else 0.95
+
+                    if word.text.strip():
+                        word_blocks.append({
+                            'text': word.text.strip(),
+                            'x': min_x,
+                            'y': min_y,
+                            'width': max_x - min_x,
+                            'height': max_y - min_y,
+                            'confidence': word_confidence
+                        })
+
+        return word_blocks
+
+    def extract_name_cedula_pairs(self, image: Image.Image) -> List[Dict]:
+        """
+        Extrae pares nombre-cédula usando post-procesamiento + proximidad espacial.
+
+        Flujo:
+        1. Extraer TODO el texto con coordenadas
+        2. Post-procesamiento: filtrar nombres
+        3. Post-procesamiento: filtrar cédulas
+        4. Emparejar por proximidad espacial
+
+        Returns:
+            Lista de pares nombre-cédula correctamente emparejados
+        """
+        from .spatial_pairing import SpatialPairing
+
+        print("\n" + "="*80)
+        print("AZURE VISION: Extracción de pares nombre-cédula")
+        print("="*80)
+
+        # 1. Preprocesar imagen
+        processed_image = self.preprocess_image(image)
+
+        # 2. Extraer TODO el texto con coordenadas
+        print("[1/4] Extrayendo texto con coordenadas...")
+
+        # Convertir imagen a bytes
+        img_byte_arr = io.BytesIO()
+        if processed_image.mode != 'RGB':
+            processed_image = processed_image.convert('RGB')
+        processed_image.save(img_byte_arr, format='PNG')
+        image_data = img_byte_arr.getvalue()
+
+        # Llamar a Azure Read API
+        result = self.client.analyze(
+            image_data=image_data,
+            visual_features=[VisualFeatures.READ]
+        )
+
+        self.last_raw_response = result
+
+        # Extraer bloques con posiciones
+        all_blocks = self._extract_text_blocks_with_positions(result)
+        print(f"  ✓ Extraídos {len(all_blocks)} bloques de texto")
+
+        # 3. Post-procesamiento: filtrar nombres
+        print("[2/4] Post-procesando nombres...")
+        nombres = SpatialPairing.filter_nombres(all_blocks)
+        print(f"  ✓ Detectados {len(nombres)} nombres")
+        for n in nombres:
+            print(f"    - {n['text']} (conf: {n['confidence']:.2%})")
+
+        # 4. Post-procesamiento: filtrar cédulas
+        print("[3/4] Post-procesando cédulas...")
+        cedulas = SpatialPairing.filter_cedulas(all_blocks)
+        print(f"  ✓ Detectadas {len(cedulas)} cédulas")
+        for c in cedulas:
+            print(f"    - {c['text']} (conf: {c['confidence']:.2%})")
+
+        # 5. Emparejar por proximidad espacial
+        print("[4/4] Emparejando por proximidad espacial...")
+        pares = SpatialPairing.pair_by_proximity(nombres, cedulas, verbose=True)
+        print(f"  ✓ Emparejados {len(pares)} pares")
+
+        print("="*80 + "\n")
+
+        return pares
