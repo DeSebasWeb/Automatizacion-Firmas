@@ -262,6 +262,12 @@ class MainController(QObject):
                 self.area_selector.deleteLater()
                 self.area_selector = None
 
+            # FLUJO AUTOMÁTICO: Capturar → Extraer automáticamente
+            self.window.add_log("Iniciando captura automática...", "INFO")
+            from PyQt6.QtCore import QTimer
+            # Esperar 100ms para que el selector se cierre
+            QTimer.singleShot(100, self.handle_capture)
+
         except Exception as e:
             self.logger.error("Error al guardar área", error=str(e))
             self.window.add_log(f"Error al guardar área: {str(e)}", "ERROR")
@@ -303,6 +309,12 @@ class MainController(QObject):
                 image_size=(self.current_image.width, self.current_image.height)
             )
 
+            # FLUJO AUTOMÁTICO: Extraer cédulas inmediatamente después de capturar
+            self.window.add_log("Iniciando extracción automática...", "INFO")
+            from PyQt6.QtCore import QTimer
+            # Esperar 100ms para que la UI se actualice
+            QTimer.singleShot(100, self.handle_extract)
+
         except Exception as e:
             self.window.setWindowOpacity(1.0)
             self.logger.error("Error al capturar", error=str(e))
@@ -312,9 +324,22 @@ class MainController(QObject):
         """Maneja la solicitud de extracción de cédulas."""
         from PyQt6.QtCore import QTimer
 
+        # DEBUG: Rastrear llamadas
+        import traceback
+        stack_trace = ''.join(traceback.format_stack()[-4:-1])
+        self.logger.info(f"handle_extract() LLAMADO desde:\n{stack_trace}")
+
+        # Prevenir llamadas múltiples simultáneas
+        if hasattr(self, '_extracting') and self._extracting:
+            self.logger.warning("Extracción ya en progreso, ignorando llamada duplicada")
+            return
+
         if not self.current_image:
             self.window.add_log("Primero capture una imagen", "WARNING")
             return
+
+        # Marcar que estamos extrayendo
+        self._extracting = True
 
         # Desactivar botón inmediatamente para evitar doble clic
         self.window.btn_extract.setEnabled(False)
@@ -330,6 +355,7 @@ class MainController(QObject):
                 self.window.add_log("No se encontraron cédulas válidas", "WARNING")
                 # Reactivar botón después de 3 segundos incluso si no hay resultados
                 QTimer.singleShot(3000, lambda: self.window.btn_extract.setEnabled(True))
+                self._extracting = False  # Reset flag
                 return
 
             self.window.set_cedulas_list(records)
@@ -339,31 +365,49 @@ class MainController(QObject):
             self.session_use_case.create_session(records)
             self.logger.info("Extracción completada", total=len(records))
 
+            # Reset flag antes de programar el procesamiento automático
+            self._extracting = False
+
             # Reactivar botón después de 3 segundos
             QTimer.singleShot(3000, lambda: self.window.btn_extract.setEnabled(True))
+
+            # FLUJO AUTOMÁTICO: Iniciar procesamiento inmediatamente
+            self.window.add_log("Iniciando procesamiento automático...", "INFO")
+            QTimer.singleShot(100, self.handle_start_processing)
 
         except Exception as e:
             self.logger.error("Error al extraer cédulas", error=str(e))
             self.window.add_log(f"Error: {str(e)}", "ERROR")
+
+            # Reset flag en caso de error
+            self._extracting = False
 
             # Reactivar botón después de 3 segundos incluso en caso de error
             QTimer.singleShot(3000, lambda: self.window.btn_extract.setEnabled(True))
 
     def handle_start_processing(self):
         """Maneja el inicio del procesamiento."""
-        self.logger.info("Iniciando procesamiento")
-        self.window.add_log("Iniciando procesamiento de cédulas...", "INFO")
+        # DEBUG: Rastrear llamadas
+        import traceback
+        stack_trace = ''.join(traceback.format_stack()[-4:-1])
+        self.logger.info(f"handle_start_processing() LLAMADO desde:\n{stack_trace}")
 
         try:
+            # Obtener sesión actual
+            session = self.session_use_case.get_session()
+
+            # Verificar si la sesión ya está corriendo (evitar doble inicio)
+            if session.status == SessionStatus.RUNNING:
+                self.logger.info("Sesión ya está corriendo, ignorando llamada duplicada")
+                return
+
+            self.window.add_log("Iniciando procesamiento de cédulas...", "INFO")
+
             # Obtener registros de la lista
             list_widget = self.window.list_cedulas
             if list_widget.count() == 0:
                 self.window.add_log("No hay cédulas para procesar", "WARNING")
                 return
-
-            # Crear sesión desde los registros actuales
-            # (los registros ya deberían estar en el session_use_case desde extract)
-            session = self.session_use_case.get_session()
 
             if session.total_records == 0:
                 self.window.add_log("No hay registros en la sesión", "WARNING")

@@ -1,653 +1,663 @@
-# Prompt para Claude Code: Extraer Pares Nombre-Cédula con Post-procesamiento + Proximidad Espacial
+----------------------------------------------------------------------
+RESUMEN DE MEJORAS
+----------------------------------------------------------------------
 
-## 🎯 OBJETIVO
+Resolución:
+  Original:  257x475 px
+  Procesada: 514x950 px
 
-Necesito extraer pares nombre-cédula de formularios con el siguiente flujo:
+Mejoras de calidad:
+  sharpness      : ↓ -  91.6%
+  contrast       : ↓ -   2.3%
+  brightness     : ↓ -   0.3%
+  noise_level    : ↑ +  64.5%
 
-1. **Extraer TODO el texto con coordenadas espaciales (x, y)**
-2. **Post-procesamiento de nombres** (filtrar y limpiar)
-3. **Post-procesamiento de cédulas** (ya existe, mantenerlo)
-4. **Emparejar por proximidad espacial** (NO por índice)
+Tiempo de procesamiento: 49 ms
+----------------------------------------------------------------------
 
-### ¿Por qué NO emparejar por índice?
+✓ Imágenes guardadas en: temp\processed
+  - original_20251202_183144.png
+  - processed_20251202_183144.png
+✓ Imagen convertida a RGB para Google Vision
+======================================================================
+PIPELINE COMPLETADO EXITOSAMENTE
+======================================================================
 
-**Problema:**
-```
-Google extrae:  13 cédulas
-Azure extrae:   15 cédulas
+DEBUG Azure Vision: Imagen procesada 514x950
 
-Si emparejo por índice:
-  nombres[0] ↔ cedulas[0]  ← Puede ser incorrecto
-  nombres[1] ↔ cedulas[1]  ← Puede ser de otra persona
-```
+======================================================================
+INICIANDO DIGIT-LEVEL ENSEMBLE OCR
+======================================================================
+DEBUG Azure Vision: Iniciando extracción de cédulas...
+DEBUG Azure Vision: Enviando imagen a Read API v4.0
 
-**Solución con proximidad espacial:**
-```
-Para cada cédula en posición (x=320, y=105):
-  Buscar el nombre MÁS CERCANO espacialmente
-  → Emparejar correctamente sin importar el orden
-```
+DEBUG Azure Vision: Imagen original 514x950
 
----
+======================================================================
+PIPELINE DE PREPROCESAMIENTO - BALANCEADO v3.1
+Google Vision API - Mejora resolución SIN adelgazar trazos
+======================================================================
+DEBUG Google Vision: Iniciando extracción...
+DEBUG Google Vision: Enviando imagen completa a API (1 sola llamada)
+✓ Imagen original: 514x950 px
 
-## 🏗️ ARQUITECTURA DE LA SOLUCIÓN
+[1/11] Upscaling 2x con interpolación cúbica...
+      ✓ Nueva resolución: 1028x1900 px
 
-### Flujo Completo:
+[2/11] Convirtiendo a escala de grises...
+      ✓ Conversión completada
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 1. EXTRACCIÓN CON COORDENADAS                               │
-│    OCR.extract_text_with_positions(image)                   │
-│    → [                                                       │
-│        {text: "Juan Lopez", x: 100, y: 100, w: 200, h: 30}, │
-│        {text: "1013112859", x: 320, y: 105, w: 150, h: 25}  │
-│      ]                                                       │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│ 2. POST-PROCESAMIENTO                                       │
-│    nombres = filter_and_clean_nombres(blocks)               │
-│    → [{text: "Juan Lopez", x: 100, y: 100, ...}]           │
-│                                                              │
-│    cedulas = filter_and_clean_cedulas(blocks)               │
-│    → [{text: "1013112859", x: 320, y: 105, ...}]           │
-└─────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────┐
-│ 3. EMPAREJAMIENTO POR PROXIMIDAD                            │
-│    Para cada cédula:                                        │
-│      - Calcular distancia a todos los nombres               │
-│      - Elegir el NOMBRE MÁS CERCANO                         │
-│      - Emparejar: nombre ↔ cédula                           │
-└─────────────────────────────────────────────────────────────┘
-```
+[3/11] Reducción de ruido deshabilitada
 
----
+[4/11] Aumento de contraste deshabilitado
 
-## 📋 TAREAS DE IMPLEMENTACIÓN
+[5/11] Realce de bordes deshabilitado
 
-### TAREA 1: Actualizar GoogleVisionAdapter
+[6/11] Sharpening deshabilitado
 
-**Archivo:** `src/infrastructure/ocr/google_vision_adapter.py`
+[7/11] Binarización deshabilitada
 
-#### 1.1 Agregar método auxiliar: `_extract_text_blocks_with_positions()`
+[8/11] Operaciones morfológicas deshabilitadas
 
-**Ya está en el prompt anterior, MANTENERLO.**
+[9/11] Corrección de inclinación deshabilitada
+DEBUG Google Vision: Llamando a DOCUMENT_TEXT_DETECTION (es)...
 
-Este método extrae bloques de texto con coordenadas (x, y, width, height).
+----------------------------------------------------------------------
+RESUMEN DE MEJORAS
+----------------------------------------------------------------------
 
-#### 1.2 Agregar funciones de post-procesamiento
+Resolución:
+  Original:  514x950 px
+  Procesada: 1028x1900 px
 
-```python
-def _filter_nombres(self, blocks: List[Dict]) -> List[Dict]:
-    """
-    Filtra bloques que son nombres.
-    
-    Post-procesamiento aplicado:
-    1. Identificar si es nombre (letras, > 10 chars, >= 2 palabras)
-    2. Limpiar texto (capitalizar, normalizar)
-    3. Mantener coordenadas originales
-    
-    Args:
-        blocks: Lista de bloques con {text, x, y, width, height, confidence}
-        
-    Returns:
-        Lista de bloques que son nombres, post-procesados
-    """
-    nombres = []
-    nombre_buffer = []
-    
-    # Ordenar bloques por posición (top→bottom, left→right)
-    sorted_blocks = sorted(blocks, key=lambda b: (b['y'], b['x']))
-    
-    for block in sorted_blocks:
-        text = block['text']
-        
-        # ¿Es parte de un nombre?
-        if self._is_nombre_pattern(text):
-            nombre_buffer.append(block)
-        else:
-            # No es nombre, guardar buffer si existe
-            if nombre_buffer:
-                merged = self._merge_nombre_blocks(nombre_buffer)
-                if merged:
-                    nombres.append(merged)
-                nombre_buffer = []
-    
-    # Guardar último buffer
-    if nombre_buffer:
-        merged = self._merge_nombre_blocks(nombre_buffer)
-        if merged:
-            nombres.append(merged)
-    
-    return nombres
+Mejoras de calidad:
+  sharpness      : ↓ -  89.7%
+  contrast       : ↑ +   0.2%
+  brightness     : ↓ -   0.0%
+  noise_level    : ↑ +  69.4%
 
-def _filter_cedulas(self, blocks: List[Dict]) -> List[Dict]:
-    """
-    Filtra bloques que son cédulas.
-    
-    Post-procesamiento aplicado:
-    1. Identificar si es cédula (números, 7-10 dígitos)
-    2. Limpiar (remover puntos, espacios)
-    3. Mantener coordenadas originales
-    
-    Args:
-        blocks: Lista de bloques con texto y coordenadas
-        
-    Returns:
-        Lista de bloques que son cédulas, post-procesadas
-    """
-    cedulas = []
-    
-    for block in blocks:
-        text = block['text']
-        
-        # Remover todo excepto dígitos
-        cleaned = re.sub(r'[^\d]', '', text)
-        
-        # Validar longitud (cédulas colombianas: 7-10 dígitos)
-        if 7 <= len(cleaned) <= 10:
-            cedulas.append({
-                'text': cleaned,  # Texto limpio
-                'x': block['x'],
-                'y': block['y'],
-                'width': block['width'],
-                'height': block['height'],
-                'confidence': block['confidence']
-            })
-    
-    return cedulas
+Tiempo de procesamiento: 188 ms
+----------------------------------------------------------------------
 
-def _is_nombre_pattern(self, text: str) -> bool:
-    """
-    Determina si un texto parece ser parte de un nombre.
-    
-    Criterios:
-    - Principalmente letras (> 70%)
-    - No es solo números
-    - Puede tener espacios, acentos, ñ
-    """
-    if not text or len(text) < 2:
-        return False
-    
-    # Contar letras
-    letter_count = sum(1 for c in text if c.isalpha() or c.isspace())
-    letter_ratio = letter_count / len(text) if text else 0
-    
-    # Debe ser principalmente letras
-    if letter_ratio < 0.7:
-        return False
-    
-    # No debe ser solo números
-    if text.replace(" ", "").isdigit():
-        return False
-    
-    return True
+✓ Imágenes guardadas en: temp\processed
+  - original_20251202_183144.png
+  - processed_20251202_183144.png
+✓ Imagen convertida a RGB para Google Vision
+======================================================================
+PIPELINE COMPLETADO EXITOSAMENTE
+======================================================================
 
-def _merge_nombre_blocks(self, blocks: List[Dict]) -> Optional[Dict]:
-    """
-    Combina múltiples bloques que forman un nombre completo.
-    
-    Ejemplo:
-      Block 1: "Juan Sebastian" (x=100, y=100)
-      Block 2: "Lopez Hernandez" (x=100, y=130)
-      → Merged: "Juan Sebastian Lopez Hernandez" (x=100, y=100, height=60)
-    
-    Args:
-        blocks: Lista de bloques consecutivos que forman un nombre
-        
-    Returns:
-        Bloque merged o None si no es válido
-    """
-    if not blocks:
-        return None
-    
-    # Concatenar textos
-    full_text = ' '.join(b['text'] for b in blocks)
-    full_text = ' '.join(full_text.split())  # Normalizar espacios
-    
-    # Validar que es un nombre completo válido
-    if not self._is_valid_nombre(full_text):
-        return None
-    
-    # Formatear (Title Case)
-    formatted_text = self._format_nombre(full_text)
-    
-    # Calcular bounding box combinado
-    min_x = min(b['x'] for b in blocks)
-    min_y = min(b['y'] for b in blocks)
-    max_x = max(b['x'] + b['width'] for b in blocks)
-    max_y = max(b['y'] + b['height'] for b in blocks)
-    
-    # Confianza promedio
-    avg_confidence = sum(b['confidence'] for b in blocks) / len(blocks)
-    
-    return {
-        'text': formatted_text,
-        'x': min_x,
-        'y': min_y,
-        'width': max_x - min_x,
-        'height': max_y - min_y,
-        'confidence': avg_confidence
-    }
+DEBUG Azure Vision: Imagen procesada 1028x1900
+DEBUG Azure Vision: Llamando a analyze() con feature READ...
+Request URL: 'https://automatizacionfirmas.cognitiveservices.azure.com//computervision/imageanalysis:analyze?api-version=REDACTED&features=REDACTED'
+Request method: 'POST'
+Request headers:
+    'Content-Length': '774253'
+    'content-type': 'application/octet-stream'
+    'Accept': 'application/json'
+    'x-ms-client-request-id': '10897db2-cfd7-11f0-a829-cc6b1e805f58'
+    'User-Agent': 'azsdk-python-ai-vision-imageanalysis/1.0.0 Python/3.12.9 (Windows-11-10.0.26200-SP0)'
+    'Ocp-Apim-Subscription-Key': 'REDACTED'
+A body is sent with the request
+✓ Google Vision: Respuesta recibida (1 llamada API)
+DEBUG Google Vision: Texto completo detectado:
+7022924770
+1033720229
+80371261
+1022958578
+1022948756
+7022940613
+17137071
+15825133
+1022994289
+1020794089
+1045046571
+52283717
+1079940717
+1023962306
+1014576991
+DEBUG Google Vision: Detectadas 15 líneas de texto
+DEBUG Google Vision: Línea 1: '7022924770'
+✓ Cédula extraída: '7022924770' (10 dígitos)
+DEBUG Google Vision: Línea 2: '1033720229'
+✓ Cédula extraída: '1033720229' (10 dígitos)
+DEBUG Google Vision: Línea 3: '80371261'
+✓ Cédula extraída: '80371261' (8 dígitos)
+DEBUG Google Vision: Línea 4: '1022958578'
+✓ Cédula extraída: '1022958578' (10 dígitos)
+DEBUG Google Vision: Línea 5: '1022948756'
+✓ Cédula extraída: '1022948756' (10 dígitos)
+DEBUG Google Vision: Línea 6: '7022940613'
+✓ Cédula extraída: '7022940613' (10 dígitos)
+DEBUG Google Vision: Línea 7: '17137071'
+✓ Cédula extraída: '17137071' (8 dígitos)
+DEBUG Google Vision: Línea 8: '15825133'
+✓ Cédula extraída: '15825133' (8 dígitos)
+DEBUG Google Vision: Línea 9: '1022994289'
+✓ Cédula extraída: '1022994289' (10 dígitos)
+DEBUG Google Vision: Línea 10: '1020794089'
+✓ Cédula extraída: '1020794089' (10 dígitos)
+DEBUG Google Vision: Línea 11: '1045046571'
+✓ Cédula extraída: '1045046571' (10 dígitos)
+DEBUG Google Vision: Línea 12: '52283717'
+✓ Cédula extraída: '52283717' (8 dígitos)
+DEBUG Google Vision: Línea 13: '1079940717'
+✓ Cédula extraída: '1079940717' (10 dígitos)
+DEBUG Google Vision: Línea 14: '1023962306'
+✓ Cédula extraída: '1023962306' (10 dígitos)
+DEBUG Google Vision: Línea 15: '1014576991'
+✓ Cédula extraída: '1014576991' (10 dígitos)
+✓ Google Vision: Total llamadas API: 1 (óptimo)
+DEBUG Google Vision: Total cédulas únicas: 15
+Response status: 200
+Response headers:
+    'Content-Length': '4093'
+    'Content-Type': 'application/json; charset=utf-8'
+    'request-id': 'c476c1c3-4727-4ecf-9daf-a48460028305'
+    'x-ms-request-id': 'c476c1c3-4727-4ecf-9daf-a48460028305'
+    'ms-vision-response-time-input-received': 'REDACTED'
+    'ms-vision-response-time-input-processed': 'REDACTED'
+    'api-supported-versions': 'REDACTED'
+    'x-envoy-upstream-service-time': 'REDACTED'
+    'CSP-Billing-Usage': 'REDACTED'
+    'apim-request-id': 'REDACTED'
+    'Strict-Transport-Security': 'REDACTED'
+    'x-content-type-options': 'REDACTED'
+    'x-ms-region': 'REDACTED'
+    'Date': 'Tue, 02 Dec 2025 23:31:49 GMT'
+✓ Azure Vision: Respuesta recibida
+DEBUG Azure Vision: 1 bloques detectados
+DEBUG Azure Vision: Línea detectada: '1022924770' (confidence: 0.95)
+✓ Cédula extraída: '1022924770' (10 dígitos)
+DEBUG Azure Vision: Línea detectada: '1033720229' (confidence: 0.95)
+✓ Cédula extraída: '1033720229' (10 dígitos)
+DEBUG Azure Vision: Línea detectada: '80 371261' (confidence: 0.95)
+✓ Cédula extraída: '80371261' (8 dígitos)
+DEBUG Azure Vision: Línea detectada: '102958578' (confidence: 0.95)
+✓ Cédula extraída: '102958578' (9 dígitos)
+DEBUG Azure Vision: Línea detectada: '1027948756' (confidence: 0.95)
+✓ Cédula extraída: '1027948756' (10 dígitos)
+DEBUG Azure Vision: Línea detectada: '1022940613' (confidence: 0.95)
+✓ Cédula extraída: '1022940613' (10 dígitos)
+DEBUG Azure Vision: Línea detectada: '17137071' (confidence: 0.95)
+✓ Cédula extraída: '17137071' (8 dígitos)
+DEBUG Azure Vision: Línea detectada: '5225133' (confidence: 0.95)
+✓ Cédula extraída: '5225133' (7 dígitos)
+DEBUG Azure Vision: Línea detectada: '1022994289' (confidence: 0.95)
+✓ Cédula extraída: '1022994289' (10 dígitos)
+DEBUG Azure Vision: Línea detectada: '1020794089' (confidence: 0.95)
+✓ Cédula extraída: '1020794089' (10 dígitos)
+DEBUG Azure Vision: Línea detectada: '1045046521' (confidence: 0.95)
+✓ Cédula extraída: '1045046521' (10 dígitos)
+DEBUG Azure Vision: Línea detectada: '52213717' (confidence: 0.95)
+✓ Cédula extraída: '52213717' (8 dígitos)
+DEBUG Azure Vision: Línea detectada: '1079940717' (confidence: 0.95)
+✓ Cédula extraída: '1079940717' (10 dígitos)
+DEBUG Azure Vision: Línea detectada: '1023962306' (confidence: 0.95)
+✓ Cédula extraída: '1023962306' (10 dígitos)
+DEBUG Azure Vision: Línea detectada: '1014576991' (confidence: 0.95)
+✓ Cédula extraída: '1014576991' (10 dígitos)
+DEBUG Azure Vision: Total cédulas únicas: 15
 
-def _is_valid_nombre(self, text: str) -> bool:
-    """
-    Verifica si es un nombre completo válido.
-    
-    Criterios:
-    - Longitud >= 10 caracteres
-    - Al menos 2 palabras (nombre + apellido)
-    - Cada palabra >= 2 caracteres
-    """
-    text = text.strip()
-    
-    if len(text) < 10:
-        return False
-    
-    words = text.split()
-    if len(words) < 2:
-        return False
-    
-    if any(len(word) < 2 for word in words):
-        return False
-    
-    return True
+✓ Primary OCR encontró:   15 cédulas
+✓ Secondary OCR encontró: 15 cédulas
 
-def _format_nombre(self, text: str) -> str:
-    """
-    Formatea un nombre con Title Case.
-    
-    Respeta:
-    - Nombres compuestos: "Juan Sebastian"
-    - Artículos: "de", "del", "de la"
-    """
-    words = text.split()
-    formatted = []
-    
-    lowercase_articles = {'de', 'del', 'de la', 'y', 'e', 'la', 'las', 'los'}
-    
-    for i, word in enumerate(words):
-        # Primera palabra siempre mayúscula
-        if i == 0:
-            formatted.append(word.capitalize())
-        # Artículos en minúscula (excepto al inicio)
-        elif word.lower() in lowercase_articles:
-            formatted.append(word.lower())
-        # Resto con mayúscula inicial
-        else:
-            formatted.append(word.capitalize())
-    
-    return ' '.join(formatted)
+======================================================================
+EMPAREJAMIENTO HÍBRIDO (Posición + Similitud)
+======================================================================
+  ✓ Par 1: Primary[0] '1022924770' ↔ Secondary[0] '7022924770' (similitud: 90.0%) [por posición]
+  ✓ Par 2: Primary[1] '1033720229' ↔ Secondary[1] '1033720229' (similitud: 100.0%) [por posición]
+  ✓ Par 3: Primary[2] '80371261' ↔ Secondary[2] '80371261' (similitud: 100.0%) [por posición]
+  ✓ Par 4: Primary[3] '102958578' ↔ Secondary[3] '1022958578' (similitud: 94.7%) [por posición]
+  ✓ Par 5: Primary[4] '1027948756' ↔ Secondary[4] '1022948756' (similitud: 90.0%) [por posición]
+  ✓ Par 6: Primary[5] '1022940613' ↔ Secondary[5] '7022940613' (similitud: 90.0%) [por posición]
+  ✓ Par 7: Primary[6] '17137071' ↔ Secondary[6] '17137071' (similitud: 100.0%) [por posición]
+  ~ Par 8: Primary[7] '5225133' ↔ Secondary[7] '15825133' (similitud: 80.0%) [por posición]
+  ✓ Par 9: Primary[8] '1022994289' ↔ Secondary[8] '1022994289' (similitud: 100.0%) [por posición]
+  ✓ Par 10: Primary[9] '1020794089' ↔ Secondary[9] '1020794089' (similitud: 100.0%) [por posición]
+  ✓ Par 11: Primary[10] '1045046521' ↔ Secondary[10] '1045046571' (similitud: 90.0%) [por posición]
+  ✓ Par 12: Primary[11] '52213717' ↔ Secondary[11] '52283717' (similitud: 87.5%) [por posición]
+  ✓ Par 13: Primary[12] '1079940717' ↔ Secondary[12] '1079940717' (similitud: 100.0%) [por posición]
+  ✓ Par 14: Primary[13] '1023962306' ↔ Secondary[13] '1023962306' (similitud: 100.0%) [por posición]
+  ✓ Par 15: Primary[14] '1014576991' ↔ Secondary[14] '1014576991' (similitud: 100.0%) [por posición]
 
-def _pair_by_proximity(self, nombres: List[Dict], cedulas: List[Dict]) -> List[Dict]:
-    """
-    Empareja cada cédula con el nombre MÁS CERCANO espacialmente.
-    
-    Estrategia:
-    1. Para cada cédula, calcular distancia a todos los nombres
-    2. Elegir el nombre con menor distancia
-    3. Priorizar proximidad VERTICAL (mismo renglón) con factor 2x
-    4. Marcar nombres como usados para evitar duplicados
-    
-    Args:
-        nombres: Lista de bloques de nombres con coordenadas
-        cedulas: Lista de bloques de cédulas con coordenadas
-        
-    Returns:
-        Lista de pares nombre-cédula
-    """
-    import math
-    
-    pares = []
-    used_nombres = set()
-    
-    # Ordenar cédulas por posición vertical (top → bottom)
-    cedulas_sorted = sorted(cedulas, key=lambda c: c['y'])
-    
-    for cedula in cedulas_sorted:
-        # Centro de la cédula
-        cedula_cx = cedula['x'] + cedula['width'] / 2
-        cedula_cy = cedula['y'] + cedula['height'] / 2
-        
-        best_nombre = None
-        best_distance = float('inf')
-        
-        for nombre in nombres:
-            # Skip si ya fue usado
-            if nombre['text'] in used_nombres:
-                continue
-            
-            # Centro del nombre
-            nombre_cx = nombre['x'] + nombre['width'] / 2
-            nombre_cy = nombre['y'] + nombre['height'] / 2
-            
-            # Calcular distancia
-            # IMPORTANTE: Dar más peso a la distancia vertical (factor 2x)
-            # porque en formularios, nombre y cédula están en el mismo renglón
-            dx = cedula_cx - nombre_cx
-            dy = (cedula_cy - nombre_cy) * 2  # Peso 2x en Y
-            
-            distance = math.sqrt(dx**2 + dy**2)
-            
-            # Penalizar si el nombre está MUY ABAJO de la cédula
-            # (normalmente el nombre va antes/arriba de la cédula)
-            if nombre_cy > cedula_cy + 50:  # Nombre 50px+ abajo
-                distance *= 2  # Penalizar 2x
-            
-            # Penalizar si están MUY LEJOS horizontalmente
-            # (mismo renglón implica distancia horizontal razonable)
-            if abs(dx) > 500:  # Más de 500px de separación horizontal
-                distance *= 1.5  # Penalizar 1.5x
-            
-            if distance < best_distance:
-                best_distance = distance
-                best_nombre = nombre
-        
-        # Empareja si encontró nombre cercano (< 300 pixels)
-        if best_nombre and best_distance < 300:
-            pares.append({
-                'nombre': best_nombre['text'],
-                'cedula': cedula['text'],
-                'confidence_nombre': best_nombre['confidence'],
-                'confidence_cedula': cedula['confidence'],
-                'distance_pixels': int(best_distance),
-                'nombre_coords': {
-                    'x': best_nombre['x'],
-                    'y': best_nombre['y']
-                },
-                'cedula_coords': {
-                    'x': cedula['x'],
-                    'y': cedula['y']
-                }
-            })
-            
-            used_nombres.add(best_nombre['text'])
-            
-            self.logger.debug(
-                f"✓ Emparejado: '{best_nombre['text']}' ↔ '{cedula['text']}' "
-                f"(distancia: {best_distance:.0f}px)"
-            )
-        else:
-            self.logger.warning(
-                f"⚠ Cédula '{cedula['text']}' sin nombre cercano "
-                f"(distancia mínima: {best_distance:.0f}px)"
-            )
-    
-    return pares
-```
+======================================================================
+RESULTADO EMPAREJAMIENTO: 15 pares encontrados
+======================================================================
 
-#### 1.3 Implementar método principal
+✓ Emparejadas: 15 cédulas
 
-```python
-def extract_name_cedula_pairs(self, image: Image.Image) -> List[Dict[str, str]]:
-    """
-    Extrae pares nombre-cédula usando post-procesamiento + proximidad espacial.
-    
-    Flujo:
-    1. Extraer TODO el texto con coordenadas
-    2. Post-procesamiento: filtrar nombres
-    3. Post-procesamiento: filtrar cédulas
-    4. Emparejar por proximidad espacial
-    
-    Returns:
-        Lista de pares nombre-cédula correctamente emparejados
-    """
-    self.logger.info("\n" + "="*80)
-    self.logger.info("GOOGLE VISION: Extracción de pares nombre-cédula")
-    self.logger.info("="*80)
-    
-    # 1. Preprocesar imagen
-    processed_image = self.preprocessor.preprocess(image)
-    
-    # 2. Extraer TODO el texto con coordenadas
-    self.logger.info("[1/4] Extrayendo texto con coordenadas...")
-    content = self._pil_to_bytes(processed_image)
-    vision_image = vision.Image(content=content)
-    
-    response = self.client.document_text_detection(image=vision_image)
-    self.last_raw_response = response
-    
-    if response.error.message:
-        raise Exception(f"Google Vision error: {response.error.message}")
-    
-    # Extraer bloques con posiciones
-    all_blocks = self._extract_text_blocks_with_positions(response)
-    self.logger.info(f"  ✓ Extraídos {len(all_blocks)} bloques de texto")
-    
-    # 3. Post-procesamiento: filtrar nombres
-    self.logger.info("[2/4] Post-procesando nombres...")
-    nombres = self._filter_nombres(all_blocks)
-    self.logger.info(f"  ✓ Detectados {len(nombres)} nombres")
-    for n in nombres:
-        self.logger.debug(f"    - {n['text']} (conf: {n['confidence']:.2%})")
-    
-    # 4. Post-procesamiento: filtrar cédulas
-    self.logger.info("[3/4] Post-procesando cédulas...")
-    cedulas = self._filter_cedulas(all_blocks)
-    self.logger.info(f"  ✓ Detectadas {len(cedulas)} cédulas")
-    for c in cedulas:
-        self.logger.debug(f"    - {c['text']} (conf: {c['confidence']:.2%})")
-    
-    # 5. Emparejar por proximidad espacial
-    self.logger.info("[4/4] Emparejando por proximidad espacial...")
-    pares = self._pair_by_proximity(nombres, cedulas)
-    self.logger.info(f"  ✓ Emparejados {len(pares)} pares")
-    
-    self.logger.info("="*80 + "\n")
-    
-    return pares
-```
 
----
+[1/15] Procesando cédula (posición 0):
+  Primary:   1022924770 (conf: 95.0%)
+  Secondary: 7022924770 (conf: 95.0%)
 
-### TAREA 2: Implementar Igual en AzureVisionAdapter
-
-**Archivo:** `src/infrastructure/ocr/azure_vision_adapter.py`
-
-**Implementar los mismos métodos:**
-- `_extract_text_blocks_with_positions()` (adaptado a Azure Read API)
-- `_filter_nombres()`
-- `_filter_cedulas()`
-- `_pair_by_proximity()`
-- `extract_name_cedula_pairs()`
-
-**Diferencia clave:**
-Azure Read API retorna estructura diferente:
-```python
-result.analyze_result.read_results[].lines[]
-# Cada line tiene: text, bounding_box, words[]
-```
-
----
-
-### TAREA 3: Implementar Ensemble
-
-**Archivo:** `src/infrastructure/ocr/digit_level_ensemble_ocr.py`
-
-```python
-def extract_name_cedula_pairs(self, image: Image.Image) -> List[Dict[str, str]]:
-    """
-    Extrae pares nombre-cédula usando ensemble de Google + Azure.
-    
-    Estrategia:
-    1. Ambos OCR extraen sus pares independientemente
-    2. Emparejar pares similares entre Google y Azure
-    3. Para cada par:
-       - Nombre: usar el de mayor confianza
-       - Cédula: usar ensemble por dígito (ya implementado)
-    """
-    
-    self.logger.info("\n" + "="*80)
-    self.logger.info("DUAL ENSEMBLE: Extracción de pares nombre-cédula")
-    self.logger.info("="*80)
-    
-    # Ejecutar ambos OCR
-    google_pairs = self.primary_ocr.extract_name_cedula_pairs(image)
-    azure_pairs = self.secondary_ocr.extract_name_cedula_pairs(image)
-    
-    self.logger.info(f"Google: {len(google_pairs)} pares")
-    self.logger.info(f"Azure:  {len(azure_pairs)} pares")
-    
-    # Emparejar pares similares
-    matched = self._match_pairs(google_pairs, azure_pairs)
-    self.logger.info(f"Emparejados: {len(matched)} pares\n")
-    
-    # Combinar información
-    final_pairs = []
-    
-    for idx, (g_pair, a_pair) in enumerate(matched, 1):
-        self.logger.info(f"[Par {idx}/{len(matched)}]")
-        self.logger.info(f"  Google: {g_pair['nombre']} → {g_pair['cedula']}")
-        self.logger.info(f"  Azure:  {a_pair['nombre']} → {a_pair['cedula']}")
-        
-        # NOMBRE: usar el de mayor confianza
-        if g_pair['confidence_nombre'] >= a_pair['confidence_nombre']:
-            final_nombre = g_pair['nombre']
-            conf_nombre = g_pair['confidence_nombre']
-            nombre_source = 'Google'
-        else:
-            final_nombre = a_pair['nombre']
-            conf_nombre = a_pair['confidence_nombre']
-            nombre_source = 'Azure'
-        
-        # CÉDULA: usar ensemble por dígito si difieren
-        if g_pair['cedula'] == a_pair['cedula']:
-            final_cedula = g_pair['cedula']
-            conf_cedula = (g_pair['confidence_cedula'] + a_pair['confidence_cedula']) / 2
-            cedula_source = 'Ambos'
-        else:
-            # Usar ensemble por dígito (tu implementación existente)
-            combined = self._combine_cedulas_by_digit(
-                g_pair['cedula'],
-                a_pair['cedula'],
-                g_pair['confidence_cedula'],
-                a_pair['confidence_cedula']
-            )
-            
-            final_cedula = combined['cedula']
-            conf_cedula = combined['confidence']
-            cedula_source = 'Ensemble'
-        
-        self.logger.info(f"  → FINAL: {final_nombre} → {final_cedula}")
-        self.logger.info(f"    Nombre de {nombre_source} (conf: {conf_nombre:.2%})")
-        self.logger.info(f"    Cédula de {cedula_source} (conf: {conf_cedula:.2%})\n")
-        
-        final_pairs.append({
-            'nombre': final_nombre,
-            'cedula': final_cedula,
-            'confidence_nombre': conf_nombre,
-            'confidence_cedula': conf_cedula
-        })
-    
-    self.logger.info("="*80 + "\n")
-    
-    return final_pairs
-
-def _match_pairs(self, google_pairs: List[Dict], azure_pairs: List[Dict]) -> List[Tuple]:
-    """
-    Empareja pares similares entre Google y Azure.
-    
-    Usa similitud de cédulas (más confiable que nombres).
-    """
-    from difflib import SequenceMatcher
-    
-    matched = []
-    used_azure = set()
-    
-    for g_pair in google_pairs:
-        best_match = None
-        best_similarity = 0.0
-        
-        for a_idx, a_pair in enumerate(azure_pairs):
-            if a_idx in used_azure:
-                continue
-            
-            # Similitud de cédulas (peso 80%)
-            cedula_sim = SequenceMatcher(
-                None,
-                g_pair['cedula'],
-                a_pair['cedula']
-            ).ratio()
-            
-            # Similitud de nombres (peso 20%)
-            nombre_sim = SequenceMatcher(
-                None,
-                g_pair['nombre'].lower(),
-                a_pair['nombre'].lower()
-            ).ratio()
-            
-            similarity = (cedula_sim * 0.8) + (nombre_sim * 0.2)
-            
-            if similarity > best_similarity:
-                best_similarity = similarity
-                best_match = (a_pair, a_idx)
-        
-        if best_match and best_similarity >= 0.6:
-            matched.append((g_pair, best_match[0]))
-            used_azure.add(best_match[1])
-    
-    return matched
-```
-
----
-
-## ✅ CRITERIOS DE ÉXITO
-
-1. ✅ **Extrae texto con coordenadas espaciales**
-2. ✅ **Post-procesamiento efectivo** de nombres y cédulas
-3. ✅ **Emparejamiento correcto** por proximidad (NO por índice)
-4. ✅ **Funciona aunque Google encuentre 13 y Azure 15**
-5. ✅ **Logging claro** de cada paso
-6. ✅ **No se pierden pares** por desincronización de índices
-
----
-
-## 📊 EJEMPLO DE OUTPUT
-
-```
 ================================================================================
-DUAL ENSEMBLE: Extracción de pares nombre-cédula
+COMPARACIÓN DÍGITO POR DÍGITO
+================================================================================
+Primary:   1022924770
+Secondary: 7022924770
 ================================================================================
 
-GOOGLE VISION: Extracción de pares nombre-cédula
+Pos 0: ⚠️ PAR DE CONFUSIÓN DETECTADO: '1' vs '7' (prob confusión: 15.0%)
+         Umbral ajustado: 10.0% → 5.0%
+Pos 0: ⚠️ CONFLICTO RESUELTO Primary='1' (95.20%) Secondary='7' (87.18%) → Elegido '1' de Primary
+Pos 1: COINCIDENCIA '0' Primary=95.20% Secondary=90.96% → Final=96.08%
+Pos 2: COINCIDENCIA '2' Primary=95.20% Secondary=98.85% → Final=99.00%
+Pos 3: COINCIDENCIA '2' Primary=95.20% Secondary=98.46% → Final=99.00%
+Pos 4: COINCIDENCIA '9' Primary=95.20% Secondary=99.41% → Final=99.00%
+Pos 5: COINCIDENCIA '2' Primary=95.20% Secondary=99.25% → Final=99.00%
+Pos 6: COINCIDENCIA '4' Primary=95.20% Secondary=99.36% → Final=99.00%
+Pos 7: COINCIDENCIA '7' Primary=95.20% Secondary=98.62% → Final=99.00%
+Pos 8: COINCIDENCIA '7' Primary=95.20% Secondary=98.76% → Final=99.00%
+Pos 9: COINCIDENCIA '0' Primary=95.20% Secondary=98.56% → Final=99.00%
+
+Pos   Primary         Secondary       Elegido         Tipo
+----- --------------- --------------- --------------- ------------
+0     '1' (95.2%)     '7' (87.2%)     '1' (95.2%)     highest_confidence
+1     '0' (95.2%)     '0' (91.0%)     '0' (96.1%)     unanimous
+2     '2' (95.2%)     '2' (98.8%)     '2' (99.0%)     unanimous
+3     '2' (95.2%)     '2' (98.5%)     '2' (99.0%)     unanimous
+4     '9' (95.2%)     '9' (99.4%)     '9' (99.0%)     unanimous
+5     '2' (95.2%)     '2' (99.3%)     '2' (99.0%)     unanimous
+6     '4' (95.2%)     '4' (99.4%)     '4' (99.0%)     unanimous
+7     '7' (95.2%)     '7' (98.6%)     '7' (99.0%)     unanimous
+8     '7' (95.2%)     '7' (98.8%)     '7' (99.0%)     unanimous
+9     '0' (95.2%)     '0' (98.6%)     '0' (99.0%)     unanimous
+
 ================================================================================
-[1/4] Extrayendo texto con coordenadas...
-  ✓ Extraídos 47 bloques de texto
-[2/4] Post-procesando nombres...
-  ✓ Detectados 3 nombres
-    - Juan Sebastian Lopez Hernandez (conf: 96%)
-    - Maria Garcia Perez (conf: 94%)
-    - Carlos Andres Martinez (conf: 95%)
-[3/4] Post-procesando cédulas...
-  ✓ Detectadas 3 cédulas
-    - 1013112859 (conf: 97%)
-    - 51723468 (conf: 95%)
-    - 1036221525 (conf: 96%)
-[4/4] Emparejando por proximidad espacial...
-  ✓ Emparejado: 'Juan Sebastian Lopez Hernandez' ↔ '1013112859' (distancia: 45px)
-  ✓ Emparejado: 'Maria Garcia Perez' ↔ '51723468' (distancia: 52px)
-  ✓ Emparejado: 'Carlos Andres Martinez' ↔ '1036221525' (distancia: 48px)
-  ✓ Emparejados 3 pares
+ESTADÍSTICAS:
+  Coincidencias: 9/10 (90.0%)
+  Conflictos:    1/10 (10.0%)
+  Confianza promedio: 98.3%
+  → RESULTADO: 1022924770 ✅
+    Confianza: 98.3%
+
+[2/15] Procesando cédula (posición 1):
+  Primary:   1033720229 (conf: 95.0%)
+  Secondary: 1033720229 (conf: 95.0%)
+
+================================================================================
+COMPARACIÓN DÍGITO POR DÍGITO
+================================================================================
+Primary:   1033720229
+Secondary: 1033720229
 ================================================================================
 
-[Similar output para Azure...]
+Pos 0: Secondary '1' tiene confianza muy baja (40.51% < 65.00%)
+  ⚠️ Combinación rechazada, usando Primary: 1033720229
+    Confianza: 95.0%
 
-Google: 3 pares
-Azure:  3 pares
-Emparejados: 3 pares
+[3/15] Procesando cédula (posición 2):
+  Primary:   80371261 (conf: 95.0%)
+  Secondary: 80371261 (conf: 95.0%)
 
-[Par 1/3]
-  Google: Juan Sebastian Lopez Hernandez → 1013112859
-  Azure:  Juan Sebastian Lopez Hernandez → 1013112859
-  → FINAL: Juan Sebastian Lopez Hernandez → 1013112859
-    Nombre de Google (conf: 96%)
-    Cédula de Ambos (conf: 97%)
-
-[Similar para pares 2 y 3...]
 ================================================================================
-```
+COMPARACIÓN DÍGITO POR DÍGITO
+================================================================================
+Primary:   80371261
+Secondary: 80371261
+================================================================================
 
----
+Pos 0: COINCIDENCIA '8' Primary=99.60% Secondary=93.67% → Final=99.00%
+Pos 1: COINCIDENCIA '0' Primary=99.60% Secondary=95.81% → Final=99.00%
+Pos 2: COINCIDENCIA '3' Primary=99.60% Secondary=97.76% → Final=99.00%
+Pos 3: COINCIDENCIA '7' Primary=99.60% Secondary=98.94% → Final=99.00%
+Pos 4: COINCIDENCIA '1' Primary=99.60% Secondary=95.99% → Final=99.00%
+Pos 5: COINCIDENCIA '2' Primary=99.60% Secondary=99.13% → Final=99.00%
+Pos 6: COINCIDENCIA '6' Primary=99.60% Secondary=99.25% → Final=99.00%
+Pos 7: COINCIDENCIA '1' Primary=99.60% Secondary=98.46% → Final=99.00%
 
-**Claude Code: Implementa extracción de pares nombre-cédula usando post-procesamiento + proximidad espacial. NO usar índices para emparejar.** 🚀
+Pos   Primary         Secondary       Elegido         Tipo
+----- --------------- --------------- --------------- ------------
+0     '8' (99.6%)     '8' (93.7%)     '8' (99.0%)     unanimous
+1     '0' (99.6%)     '0' (95.8%)     '0' (99.0%)     unanimous
+2     '3' (99.6%)     '3' (97.8%)     '3' (99.0%)     unanimous
+3     '7' (99.6%)     '7' (98.9%)     '7' (99.0%)     unanimous
+4     '1' (99.6%)     '1' (96.0%)     '1' (99.0%)     unanimous
+5     '2' (99.6%)     '2' (99.1%)     '2' (99.0%)     unanimous
+6     '6' (99.6%)     '6' (99.3%)     '6' (99.0%)     unanimous   
+7     '1' (99.6%)     '1' (98.5%)     '1' (99.0%)     unanimous
+
+================================================================================
+ESTADÍSTICAS:
+  Coincidencias: 8/8 (100.0%)
+  Conflictos:    0/8 (0.0%)
+  Confianza promedio: 99.0%
+  → RESULTADO: 80371261 ✅
+    Confianza: 99.0%
+
+[4/15] Procesando cédula (posición 3):
+  Primary:   102958578 (conf: 95.0%)
+  Secondary: 1022958578 (conf: 95.0%)
+
+================================================================================
+⚠️ LONGITUDES DIFERENTES - Eligiendo por confianza general
+================================================================================
+Primary:   102958578 (9 dígitos, conf: 95.0%)
+Secondary: 1022958578 (10 dígitos, conf: 95.0%)
+================================================================================
+
+→ ELEGIDO Primary: 102958578 (confianza: 95.0%)
+
+  → RESULTADO: 102958578 ✅
+    Confianza: 95.0%
+
+[5/15] Procesando cédula (posición 4):
+  Primary:   1027948756 (conf: 95.0%)
+  Secondary: 1022948756 (conf: 95.0%)
+
+================================================================================
+COMPARACIÓN DÍGITO POR DÍGITO
+================================================================================
+Primary:   1027948756
+Secondary: 1022948756
+================================================================================
+
+Pos 0: COINCIDENCIA '1' Primary=82.60% Secondary=97.93% → Final=93.26%
+Pos 1: COINCIDENCIA '0' Primary=82.60% Secondary=96.36% → Final=92.48%
+Pos 2: COINCIDENCIA '2' Primary=82.60% Secondary=98.41% → Final=93.50%
+Pos 3: ⚠️ PAR DE CONFUSIÓN DETECTADO: '7' vs '2' (prob confusión: 12.0%)
+         Umbral ajustado: 10.0% → 5.0%
+Pos 3: ⚠️ CONFLICTO RESUELTO Primary='7' (82.60%) Secondary='2' (96.60%) → Elegido '2' de Secondary
+Pos 4: COINCIDENCIA '9' Primary=82.60% Secondary=98.21% → Final=93.41%
+Pos 5: COINCIDENCIA '4' Primary=82.60% Secondary=98.55% → Final=93.58%
+Pos 6: COINCIDENCIA '8' Primary=82.60% Secondary=98.78% → Final=93.69%
+Pos 7: COINCIDENCIA '7' Primary=82.60% Secondary=98.90% → Final=93.75%
+Pos 8: COINCIDENCIA '5' Primary=82.60% Secondary=98.11% → Final=93.36%
+Pos 9: COINCIDENCIA '6' Primary=82.60% Secondary=98.45% → Final=93.53%
+
+Pos   Primary         Secondary       Elegido         Tipo
+----- --------------- --------------- --------------- ------------
+0     '1' (82.6%)     '1' (97.9%)     '1' (93.3%)     unanimous
+1     '0' (82.6%)     '0' (96.4%)     '0' (92.5%)     unanimous
+2     '2' (82.6%)     '2' (98.4%)     '2' (93.5%)     unanimous
+3     '7' (82.6%)     '2' (96.6%)     '2' (96.6%)     highest_confidence
+4     '9' (82.6%)     '9' (98.2%)     '9' (93.4%)     unanimous
+5     '4' (82.6%)     '4' (98.6%)     '4' (93.6%)     unanimous   
+6     '8' (82.6%)     '8' (98.8%)     '8' (93.7%)     unanimous   
+7     '7' (82.6%)     '7' (98.9%)     '7' (93.7%)     unanimous   
+8     '5' (82.6%)     '5' (98.1%)     '5' (93.4%)     unanimous
+9     '6' (82.6%)     '6' (98.5%)     '6' (93.5%)     unanimous
+
+================================================================================
+ESTADÍSTICAS:
+  Coincidencias: 9/10 (90.0%)
+  Conflictos:    1/10 (10.0%)
+  Confianza promedio: 93.7%
+  → RESULTADO: 1022948756 ✅
+    Confianza: 93.7%
+
+[6/15] Procesando cédula (posición 5):
+  Primary:   1022940613 (conf: 95.0%)
+  Secondary: 7022940613 (conf: 95.0%)
+
+================================================================================
+COMPARACIÓN DÍGITO POR DÍGITO
+================================================================================
+Primary:   1022940613
+Secondary: 7022940613
+================================================================================
+
+Pos 0: ℹ️ Threshold relajado para Secondary (par de confusión)
+Pos 0: Secondary '7' tiene confianza muy baja (60.41% < 65.00%)
+  ⚠️ Combinación rechazada, usando Primary: 1022940613
+    Confianza: 95.0%
+
+[7/15] Procesando cédula (posición 6):
+  Primary:   17137071 (conf: 95.0%)
+  Secondary: 17137071 (conf: 95.0%)
+
+================================================================================
+COMPARACIÓN DÍGITO POR DÍGITO
+================================================================================
+Primary:   17137071
+Secondary: 17137071
+================================================================================
+
+Pos 0: COINCIDENCIA '1' Primary=96.50% Secondary=96.08% → Final=99.00%
+Pos 1: COINCIDENCIA '7' Primary=96.50% Secondary=97.84% → Final=99.00%
+Pos 2: COINCIDENCIA '1' Primary=96.50% Secondary=97.33% → Final=99.00%
+Pos 3: COINCIDENCIA '3' Primary=96.50% Secondary=99.56% → Final=99.00%
+Pos 4: COINCIDENCIA '7' Primary=96.50% Secondary=99.21% → Final=99.00%
+Pos 5: COINCIDENCIA '0' Primary=96.50% Secondary=99.36% → Final=99.00%
+Pos 6: COINCIDENCIA '7' Primary=96.50% Secondary=99.03% → Final=99.00%
+Pos 7: COINCIDENCIA '1' Primary=96.50% Secondary=98.92% → Final=99.00%
+
+Pos   Primary         Secondary       Elegido         Tipo
+----- --------------- --------------- --------------- ------------
+0     '1' (96.5%)     '1' (96.1%)     '1' (99.0%)     unanimous
+1     '7' (96.5%)     '7' (97.8%)     '7' (99.0%)     unanimous   
+2     '1' (96.5%)     '1' (97.3%)     '1' (99.0%)     unanimous   
+3     '3' (96.5%)     '3' (99.6%)     '3' (99.0%)     unanimous   
+4     '7' (96.5%)     '7' (99.2%)     '7' (99.0%)     unanimous
+5     '0' (96.5%)     '0' (99.4%)     '0' (99.0%)     unanimous
+6     '7' (96.5%)     '7' (99.0%)     '7' (99.0%)     unanimous   
+7     '1' (96.5%)     '1' (98.9%)     '1' (99.0%)     unanimous
+
+================================================================================
+ESTADÍSTICAS:
+  Coincidencias: 8/8 (100.0%)
+  Conflictos:    0/8 (0.0%)
+  Confianza promedio: 99.0%
+  → RESULTADO: 17137071 ✅
+    Confianza: 99.0%
+
+[8/15] Procesando cédula (posición 7):
+  Primary:   5225133 (conf: 95.0%)
+  Secondary: 15825133 (conf: 95.0%)
+
+================================================================================
+⚠️ LONGITUDES DIFERENTES - Eligiendo por confianza general
+================================================================================
+Primary:   5225133 (7 dígitos, conf: 95.0%)
+Secondary: 15825133 (8 dígitos, conf: 95.0%)
+================================================================================
+
+→ ELEGIDO Primary: 5225133 (confianza: 95.0%)
+
+  → RESULTADO: 5225133 ✅
+    Confianza: 95.0%
+
+[9/15] Procesando cédula (posición 8):
+  Primary:   1022994289 (conf: 95.0%)
+  Secondary: 1022994289 (conf: 95.0%)
+
+================================================================================
+COMPARACIÓN DÍGITO POR DÍGITO
+================================================================================
+Primary:   1022994289
+Secondary: 1022994289
+================================================================================
+
+Pos 0: COINCIDENCIA '1' Primary=99.20% Secondary=95.25% → Final=99.00%
+Pos 1: COINCIDENCIA '0' Primary=99.20% Secondary=96.32% → Final=99.00%
+Pos 2: COINCIDENCIA '2' Primary=99.20% Secondary=97.30% → Final=99.00%
+Pos 3: COINCIDENCIA '2' Primary=99.20% Secondary=98.81% → Final=99.00%
+Pos 4: COINCIDENCIA '9' Primary=99.20% Secondary=97.34% → Final=99.00%
+Pos 5: COINCIDENCIA '9' Primary=99.20% Secondary=98.47% → Final=99.00%
+Pos 6: COINCIDENCIA '4' Primary=99.20% Secondary=98.25% → Final=99.00%
+Pos 7: COINCIDENCIA '2' Primary=99.20% Secondary=98.60% → Final=99.00%
+Pos 8: COINCIDENCIA '8' Primary=99.20% Secondary=97.32% → Final=99.00%
+Pos 9: COINCIDENCIA '9' Primary=99.20% Secondary=96.98% → Final=99.00%
+
+Pos   Primary         Secondary       Elegido         Tipo
+----- --------------- --------------- --------------- ------------
+0     '1' (99.2%)     '1' (95.3%)     '1' (99.0%)     unanimous
+1     '0' (99.2%)     '0' (96.3%)     '0' (99.0%)     unanimous
+2     '2' (99.2%)     '2' (97.3%)     '2' (99.0%)     unanimous
+3     '2' (99.2%)     '2' (98.8%)     '2' (99.0%)     unanimous
+4     '9' (99.2%)     '9' (97.3%)     '9' (99.0%)     unanimous
+5     '9' (99.2%)     '9' (98.5%)     '9' (99.0%)     unanimous
+6     '4' (99.2%)     '4' (98.3%)     '4' (99.0%)     unanimous
+7     '2' (99.2%)     '2' (98.6%)     '2' (99.0%)     unanimous
+8     '8' (99.2%)     '8' (97.3%)     '8' (99.0%)     unanimous
+9     '9' (99.2%)     '9' (97.0%)     '9' (99.0%)     unanimous
+
+================================================================================
+ESTADÍSTICAS:
+  Coincidencias: 10/10 (100.0%)
+  Conflictos:    0/10 (0.0%)
+  Confianza promedio: 99.0%
+  → RESULTADO: 1022994289 ✅
+    Confianza: 99.0%
+
+[10/15] Procesando cédula (posición 9):
+  Primary:   1020794089 (conf: 95.0%)
+  Secondary: 1020794089 (conf: 95.0%)
+
+================================================================================
+COMPARACIÓN DÍGITO POR DÍGITO
+================================================================================
+Primary:   1020794089
+Secondary: 1020794089
+================================================================================
+
+Pos 0: COINCIDENCIA '1' Primary=99.20% Secondary=94.81% → Final=99.00%
+Pos 1: COINCIDENCIA '0' Primary=99.20% Secondary=96.69% → Final=99.00%
+Pos 2: COINCIDENCIA '2' Primary=99.20% Secondary=95.92% → Final=99.00%
+Pos 3: COINCIDENCIA '0' Primary=99.20% Secondary=97.26% → Final=99.00%
+Pos 4: COINCIDENCIA '7' Primary=99.20% Secondary=98.19% → Final=99.00%
+Pos 5: COINCIDENCIA '9' Primary=99.20% Secondary=98.91% → Final=99.00%
+Pos 6: COINCIDENCIA '4' Primary=99.20% Secondary=99.11% → Final=99.00%
+Pos 7: COINCIDENCIA '0' Primary=99.20% Secondary=98.52% → Final=99.00%
+Pos 8: COINCIDENCIA '8' Primary=99.20% Secondary=98.57% → Final=99.00%
+Pos 9: COINCIDENCIA '9' Primary=99.20% Secondary=92.69% → Final=98.94%
+
+Pos   Primary         Secondary       Elegido         Tipo
+----- --------------- --------------- --------------- ------------
+0     '1' (99.2%)     '1' (94.8%)     '1' (99.0%)     unanimous
+1     '0' (99.2%)     '0' (96.7%)     '0' (99.0%)     unanimous
+2     '2' (99.2%)     '2' (95.9%)     '2' (99.0%)     unanimous
+3     '0' (99.2%)     '0' (97.3%)     '0' (99.0%)     unanimous
+4     '7' (99.2%)     '7' (98.2%)     '7' (99.0%)     unanimous
+5     '9' (99.2%)     '9' (98.9%)     '9' (99.0%)     unanimous
+6     '4' (99.2%)     '4' (99.1%)     '4' (99.0%)     unanimous
+7     '0' (99.2%)     '0' (98.5%)     '0' (99.0%)     unanimous
+8     '8' (99.2%)     '8' (98.6%)     '8' (99.0%)     unanimous
+9     '9' (99.2%)     '9' (92.7%)     '9' (98.9%)     unanimous
+
+================================================================================
+ESTADÍSTICAS:
+  Coincidencias: 10/10 (100.0%)
+  Conflictos:    0/10 (0.0%)
+  Confianza promedio: 99.0%
+  → RESULTADO: 1020794089 ✅
+    Confianza: 99.0%
+
+[11/15] Procesando cédula (posición 10):
+  Primary:   1045046521 (conf: 95.0%)
+  Secondary: 1045046571 (conf: 95.0%)
+
+================================================================================
+COMPARACIÓN DÍGITO POR DÍGITO
+================================================================================
+Primary:   1045046521
+Secondary: 1045046571
+================================================================================
+
+Pos 0: COINCIDENCIA '1' Primary=83.20% Secondary=96.56% → Final=92.88%
+Pos 1: COINCIDENCIA '0' Primary=83.20% Secondary=97.80% → Final=93.50%
+Pos 2: COINCIDENCIA '4' Primary=83.20% Secondary=97.13% → Final=93.17%
+Pos 3: COINCIDENCIA '5' Primary=83.20% Secondary=97.95% → Final=93.58%
+Pos 4: COINCIDENCIA '0' Primary=83.20% Secondary=87.76% → Final=88.48%
+Pos 5: COINCIDENCIA '4' Primary=83.20% Secondary=97.84% → Final=93.52%
+Pos 6: COINCIDENCIA '6' Primary=83.20% Secondary=97.66% → Final=93.43%
+Pos 7: COINCIDENCIA '5' Primary=83.20% Secondary=94.37% → Final=91.79%
+Pos 8: ⚠️ PAR DE CONFUSIÓN DETECTADO: '2' vs '7' (prob confusión: 12.0%)
+         Umbral ajustado: 10.0% → 5.0%
+Pos 8: ⚠️ CONFLICTO RESUELTO Primary='2' (83.20%) Secondary='7' (75.82%) → Elegido '2' de Primary
+Pos 9: COINCIDENCIA '1' Primary=83.20% Secondary=86.58% → Final=87.89%
+
+Pos   Primary         Secondary       Elegido         Tipo
+----- --------------- --------------- --------------- ------------
+0     '1' (83.2%)     '1' (96.6%)     '1' (92.9%)     unanimous   
+1     '0' (83.2%)     '0' (97.8%)     '0' (93.5%)     unanimous
+2     '4' (83.2%)     '4' (97.1%)     '4' (93.2%)     unanimous
+3     '5' (83.2%)     '5' (98.0%)     '5' (93.6%)     unanimous
+4     '0' (83.2%)     '0' (87.8%)     '0' (88.5%)     unanimous
+5     '4' (83.2%)     '4' (97.8%)     '4' (93.5%)     unanimous
+6     '6' (83.2%)     '6' (97.7%)     '6' (93.4%)     unanimous
+7     '5' (83.2%)     '5' (94.4%)     '5' (91.8%)     unanimous
+8     '2' (83.2%)     '7' (75.8%)     '2' (83.2%)     highest_confidence
+9     '1' (83.2%)     '1' (86.6%)     '1' (87.9%)     unanimous
+
+================================================================================
+ESTADÍSTICAS:
+  Coincidencias: 9/10 (90.0%)
+  Conflictos:    1/10 (10.0%)
+  Confianza promedio: 91.1%
+  → RESULTADO: 1045046521 ✅
+    Confianza: 91.1%
+
+[12/15] Procesando cédula (posición 11):
+  Primary:   52213717 (conf: 95.0%)
+  Secondary: 52283717 (conf: 95.0%)
+
+================================================================================
+COMPARACIÓN DÍGITO POR DÍGITO
+================================================================================
+Primary:   52213717
+Secondary: 52283717
+================================================================================
+
+Pos 0: COINCIDENCIA '5' Primary=75.10% Secondary=97.43% → Final=89.27%
+Pos 1: COINCIDENCIA '2' Primary=75.10% Secondary=94.90% → Final=88.00%
+Pos 2: COINCIDENCIA '2' Primary=75.10% Secondary=94.51% → Final=87.81%
+Pos 3: CONFLICTO AMBIGUO Primary='1' (75.10%) Secondary='8' (73.34%) Diferencia=1.76% < 10.00% → RECHAZADO
+  ⚠️ Combinación rechazada, usando Primary: 52213717
+    Confianza: 95.0%
+
+[13/15] Procesando cédula (posición 12):
+  Primary:   1079940717 (conf: 95.0%)
+  Secondary: 1079940717 (conf: 95.0%)
+
+================================================================================
+COMPARACIÓN DÍGITO POR DÍGITO
+================================================================================
+Primary:   1079940717
+Secondary: 1079940717
+================================================================================
+
+Pos 0: COINCIDENCIA '1' Primary=98.10% Secondary=95.72% → Final=99.00%
+Pos 1: COINCIDENCIA '0' Primary=98.10% Secondary=97.22% → Final=99.00%
+Pos 2: Secondary '7' tiene confianza muy baja (57.84% < 65.00%)
+  ⚠️ Combinación rechazada, usando Primary: 1079940717
+    Confianza: 95.0%
+
+[14/15] Procesando cédula (posición 13):
+  Primary:   1023962306 (conf: 95.0%)
+  Secondary: 1023962306 (conf: 95.0%)
+
+================================================================================
+COMPARACIÓN DÍGITO POR DÍGITO
+================================================================================
+Primary:   1023962306
+Secondary: 1023962306
+================================================================================
+
+Pos 0: Secondary '1' tiene confianza muy baja (45.11% < 65.00%)
+  ⚠️ Combinación rechazada, usando Primary: 1023962306
+    Confianza: 95.0%
+
+[15/15] Procesando cédula (posición 14):
+  Primary:   1014576991 (conf: 95.0%)
+  Secondary: 1014576991 (conf: 95.0%)
+
+================================================================================
+COMPARACIÓN DÍGITO POR DÍGITO
+================================================================================
+Primary:   1014576991
+Secondary: 1014576991
+================================================================================
+
+Pos 0: COINCIDENCIA '1' Primary=76.80% Secondary=89.04% → Final=85.92%
+Pos 1: COINCIDENCIA '0' Primary=76.80% Secondary=93.73% → Final=88.27%
+Pos 2: Secondary '1' tiene confianza muy baja (56.35% < 65.00%)
+  ⚠️ Combinación rechazada, usando Primary: 1014576991
+    Confianza: 95.0%
+  ℹ️ Diferencia mínima (0) entre OCRs → NO se agregan cédulas sin par
+
+======================================================================
+RESULTADO FINAL: 15 cédulas extraídas con alta confianza
+======================================================================

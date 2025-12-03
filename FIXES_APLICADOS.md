@@ -1,6 +1,42 @@
 # Resumen de Fixes Aplicados - 2025-12-02
 
-## 1. Velocidad de Digitación (5x más rápido)
+## 1. Workflow Simplificado (1 Solo Paso)
+
+### Problema
+- Workflow requería 4 pasos manuales (Alt+1, Alt+2, Alt+3, Alt+4)
+- Usuario debía presionar 4 hotkeys antes de poder empezar a digitar
+- 19 acciones totales por formulario (4 setup + 15 cédulas)
+
+### Solución
+**Archivo:** [src/presentation/controllers/main_controller.py](src/presentation/controllers/main_controller.py)
+
+**Flujo automático en cascada:**
+```
+Alt+1 (Seleccionar área)
+  ↓ (automático 500ms)
+Capturar pantalla
+  ↓ (automático 500ms)
+Extraer cédulas con OCR
+  ↓ (automático 500ms)
+Iniciar procesamiento (habilita Ctrl+Q)
+```
+
+**Cambios implementados:**
+1. `_on_area_selected()` → llama automáticamente a `handle_capture()`
+2. `_perform_capture()` → llama automáticamente a `handle_extract()`
+3. `handle_extract()` → llama automáticamente a `handle_start_processing()`
+
+**Resultado:**
+- **1 solo paso manual** (Alt+1) en lugar de 4
+- **75% menos hotkeys** por formulario
+- **16 acciones totales** (1 setup + 15 cédulas) = **16% menos clics**
+- **Más fluido y menos propenso a errores**
+
+Ver detalles completos en [WORKFLOW_SIMPLIFICADO.md](WORKFLOW_SIMPLIFICADO.md)
+
+---
+
+## 2. Velocidad de Digitación (5x más rápido)
 
 ### Problema
 - Ctrl+Q digitaba muy lento (50ms entre cada tecla)
@@ -18,7 +54,7 @@ automation:
 
 ---
 
-## 2. Hotkeys Sin Conflictos (Alt+Números)
+## 3. Hotkeys Sin Conflictos (Alt+Números)
 
 ### Problema Original
 - Solo 3 hotkeys funcionaban (Ctrl+Q, F3, F4)
@@ -71,7 +107,7 @@ Alt+5   → Pausar/Reanudar (cuando necesites)
 
 ---
 
-## 3. Fix Emparejamiento OCR (Híbrido: Posición + Similitud)
+## 4. Fix Emparejamiento OCR (Híbrido: Posición + Similitud)
 
 ### Problema Identificado
 **Síntomas del log.txt:**
@@ -151,7 +187,7 @@ Pos 3: '7' vs '7' → Coinciden ✅
 
 ---
 
-## 4. Fix Comparación Dígito por Dígito (Manejo de Longitudes Diferentes)
+## 5. Fix Comparación Dígito por Dígito (Manejo de Longitudes Diferentes)
 
 ### Problema Identificado
 **Síntomas del log.txt (Cédula #15):**
@@ -215,7 +251,76 @@ Secondary: 29657092  (8 dígitos, conf: 95.0%)
 
 ---
 
-## 5. Documentación Creada
+## 6. Fix Cédulas Duplicadas (No Agregar Sin Par con Diferencia Mínima)
+
+### Problema Identificado
+**Síntomas del log.txt:**
+```
+✓ Primary OCR encontró:   14 cédulas (Azure)
+✓ Secondary OCR encontró: 15 cédulas (Google)
+Diferencia: 1 cédula
+
+RESULTADO EMPAREJAMIENTO: 14 pares encontrados
+
+... pero al final ...
+
+ℹ️ Agregando cédula sin par de Secondary: 23599
+ℹ️ Agregando cédula sin par de Secondary: 1127629129
+ℹ️ Agregando cédula sin par de Secondary: 1022327353
+ℹ️ Agregando cédula sin par de Secondary: 74612310
+
+RESULTADO FINAL: 18 cédulas ❌ (debería ser 14 o 15)
+```
+
+**Problema:** 14 pares + 4 sin par = 18 total (incorrecto cuando solo hay 15 reales)
+
+### Causa Raíz
+El algoritmo agregaba TODAS las cédulas "sin par" al final, incluso cuando la diferencia entre OCRs era mínima (14 vs 15 = 1). Esto generaba duplicados porque las cédulas "sin par" eran en realidad errores de emparejamiento, no cédulas extra reales.
+
+### Solución Implementada
+**Archivo:** [src/infrastructure/ocr/digit_level_ensemble_ocr.py](src/infrastructure/ocr/digit_level_ensemble_ocr.py#L190-L207)
+
+**Lógica agregada:**
+```python
+# Calcular diferencia entre ambos OCRs
+count_difference = abs(len(primary_records) - len(secondary_records))
+
+if count_difference > 2:
+    # Diferencia significativa (ej: 15 vs 10) → SÍ agregar cédulas sin par
+    agregar_cedulas_sin_par()
+else:
+    # Diferencia mínima (ej: 14 vs 15) → NO agregar cédulas sin par
+    print("Diferencia mínima → NO se agregan cédulas sin par")
+```
+
+**Umbral:** Solo agregar cédulas sin par si la diferencia es >2
+
+| Primary | Secondary | Diferencia | ¿Agregar sin par? |
+|---------|-----------|------------|-------------------|
+| 14 | 15 | 1 | ❌ NO (probablemente error de emparejamiento) |
+| 12 | 15 | 3 | ✅ SÍ (diferencia significativa) |
+| 10 | 15 | 5 | ✅ SÍ (diferencia grande) |
+
+**Resultado Esperado:**
+```
+Azure: 14 cédulas
+Google: 15 cédulas
+Diferencia: 1 (≤2)
+
+→ Se crean 14 pares
+→ NO se agregan cédulas sin par
+→ RESULTADO FINAL: 14 cédulas ✅
+```
+
+---
+
+## 7. Documentación Creada
+
+### [WORKFLOW_SIMPLIFICADO.md](WORKFLOW_SIMPLIFICADO.md)
+- Guía completa del nuevo workflow automático
+- Comparación antes/después (4 pasos → 1 paso)
+- Tips de uso y solución de problemas
+- Estadísticas de mejora
 
 ### [HOTKEYS_FINALES.md](HOTKEYS_FINALES.md)
 - Guía completa de hotkeys Alt+números

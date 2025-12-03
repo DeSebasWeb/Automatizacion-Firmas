@@ -370,11 +370,18 @@ class MainWindow(QMainWindow):
         elif session.status == SessionStatus.COMPLETED:
             self.btn_next.setEnabled(False)
             self.btn_pause.setEnabled(False)
-            QMessageBox.information(
-                self,
-                "Procesamiento Completo",
-                f"Se procesaron {session.total_processed} registros.\n"
-                f"Errores: {session.total_errors}"
+            # Comentado: Mensaje emergente molesto
+            # QMessageBox.information(
+            #     self,
+            #     "Procesamiento Completo",
+            #     f"Se procesaron {session.total_processed} registros.\n"
+            #     f"Errores: {session.total_errors}"
+            # )
+            # En su lugar, solo mostrar en el log
+            self.add_log(
+                f"✅ Procesamiento completado: {session.total_processed} registros procesados, "
+                f"{session.total_errors} errores. Presiona Alt+1 para el siguiente formulario.",
+                "INFO"
             )
 
         # Actualizar progreso

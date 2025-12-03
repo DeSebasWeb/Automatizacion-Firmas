@@ -419,21 +419,58 @@ class DigitLevelEnsembleOCR(OCRPort):
         if len(primary_text) != len(secondary_text):
             if self.verbose_logging:
                 print(f"\n{'='*80}")
-                print("⚠️ LONGITUDES DIFERENTES - Eligiendo por confianza general")
+                print("⚠️ LONGITUDES DIFERENTES - Eligiendo por longitud estándar")
                 print(f"{'='*80}")
                 print(f"Primary:   {primary_text} ({len(primary_text)} dígitos, conf: {primary.confidence.as_percentage():.1f}%)")
                 print(f"Secondary: {secondary_text} ({len(secondary_text)} dígitos, conf: {secondary.confidence.as_percentage():.1f}%)")
                 print(f"{'='*80}\n")
 
-            # Elegir la que tenga mayor confianza general
-            if primary.confidence.value >= secondary.confidence.value:
+            # PRIORIDAD: Elegir por longitud más común de cédulas
+            # Orden de preferencia: 10 dígitos > 8 dígitos > 9 dígitos > otros
+            primary_len = len(primary_text)
+            secondary_len = len(secondary_text)
+
+            # Función para calcular score de preferencia por longitud
+            def length_priority(length):
+                if length == 10:
+                    return 3  # Máxima prioridad (cédulas colombianas)
+                elif length == 8:
+                    return 2  # Segunda prioridad (cédulas antiguas)
+                elif length == 9:
+                    return 1  # Tercera prioridad (menos común)
+                else:
+                    return 0  # Otros (muy raro)
+
+            primary_priority = length_priority(primary_len)
+            secondary_priority = length_priority(secondary_len)
+
+            # Comparar por prioridad de longitud
+            if primary_priority > secondary_priority:
                 if self.verbose_logging:
-                    print(f"→ ELEGIDO Primary: {primary_text} (confianza: {primary.confidence.as_percentage():.1f}%)\n")
+                    print(f"✅ ELEGIDO Primary: {primary_text}")
+                    print(f"   Razón: {primary_len} dígitos es más común que {secondary_len} dígitos")
+                    print(f"   Confianza: {primary.confidence.as_percentage():.1f}%\n")
                 return primary
-            else:
+            elif secondary_priority > primary_priority:
                 if self.verbose_logging:
-                    print(f"→ ELEGIDO Secondary: {secondary_text} (confianza: {secondary.confidence.as_percentage():.1f}%)\n")
+                    print(f"✅ ELEGIDO Secondary: {secondary_text}")
+                    print(f"   Razón: {secondary_len} dígitos es más común que {primary_len} dígitos")
+                    print(f"   Confianza: {secondary.confidence.as_percentage():.1f}%\n")
                 return secondary
+            else:
+                # Misma prioridad de longitud → elegir por confianza
+                if primary.confidence.value >= secondary.confidence.value:
+                    if self.verbose_logging:
+                        print(f"✅ ELEGIDO Primary: {primary_text}")
+                        print(f"   Razón: Misma prioridad de longitud ({primary_len} dígitos), mayor confianza")
+                        print(f"   Confianza: {primary.confidence.as_percentage():.1f}% vs {secondary.confidence.as_percentage():.1f}%\n")
+                    return primary
+                else:
+                    if self.verbose_logging:
+                        print(f"✅ ELEGIDO Secondary: {secondary_text}")
+                        print(f"   Razón: Misma prioridad de longitud ({secondary_len} dígitos), mayor confianza")
+                        print(f"   Confianza: {secondary.confidence.as_percentage():.1f}% vs {primary.confidence.as_percentage():.1f}%\n")
+                    return secondary
 
         max_len = len(primary_text)  # Ahora sabemos que son iguales
         min_len = max_len
