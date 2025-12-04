@@ -1,663 +1,336 @@
-----------------------------------------------------------------------
-RESUMEN DE MEJORAS
-----------------------------------------------------------------------
-
-Resolución:
-  Original:  257x475 px
-  Procesada: 514x950 px
-
-Mejoras de calidad:
-  sharpness      : ↓ -  91.6%
-  contrast       : ↓ -   2.3%
-  brightness     : ↓ -   0.3%
-  noise_level    : ↑ +  64.5%
-
-Tiempo de procesamiento: 49 ms
-----------------------------------------------------------------------
-
-✓ Imágenes guardadas en: temp\processed
-  - original_20251202_183144.png
-  - processed_20251202_183144.png
-✓ Imagen convertida a RGB para Google Vision
-======================================================================
-PIPELINE COMPLETADO EXITOSAMENTE
-======================================================================
-
-DEBUG Azure Vision: Imagen procesada 514x950
-
-======================================================================
-INICIANDO DIGIT-LEVEL ENSEMBLE OCR
-======================================================================
-DEBUG Azure Vision: Iniciando extracción de cédulas...
-DEBUG Azure Vision: Enviando imagen a Read API v4.0
-
-DEBUG Azure Vision: Imagen original 514x950
-
-======================================================================
-PIPELINE DE PREPROCESAMIENTO - BALANCEADO v3.1
-Google Vision API - Mejora resolución SIN adelgazar trazos
-======================================================================
-DEBUG Google Vision: Iniciando extracción...
-DEBUG Google Vision: Enviando imagen completa a API (1 sola llamada)
-✓ Imagen original: 514x950 px
-
-[1/11] Upscaling 2x con interpolación cúbica...
-      ✓ Nueva resolución: 1028x1900 px
-
-[2/11] Convirtiendo a escala de grises...
-      ✓ Conversión completada
-
-[3/11] Reducción de ruido deshabilitada
-
-[4/11] Aumento de contraste deshabilitado
-
-[5/11] Realce de bordes deshabilitado
-
-[6/11] Sharpening deshabilitado
-
-[7/11] Binarización deshabilitada
-
-[8/11] Operaciones morfológicas deshabilitadas
-
-[9/11] Corrección de inclinación deshabilitada
-DEBUG Google Vision: Llamando a DOCUMENT_TEXT_DETECTION (es)...
-
-----------------------------------------------------------------------
-RESUMEN DE MEJORAS
-----------------------------------------------------------------------
-
-Resolución:
-  Original:  514x950 px
-  Procesada: 1028x1900 px
-
-Mejoras de calidad:
-  sharpness      : ↓ -  89.7%
-  contrast       : ↑ +   0.2%
-  brightness     : ↓ -   0.0%
-  noise_level    : ↑ +  69.4%
-
-Tiempo de procesamiento: 188 ms
-----------------------------------------------------------------------
-
-✓ Imágenes guardadas en: temp\processed
-  - original_20251202_183144.png
-  - processed_20251202_183144.png
-✓ Imagen convertida a RGB para Google Vision
-======================================================================
-PIPELINE COMPLETADO EXITOSAMENTE
-======================================================================
-
-DEBUG Azure Vision: Imagen procesada 1028x1900
-DEBUG Azure Vision: Llamando a analyze() con feature READ...
-Request URL: 'https://automatizacionfirmas.cognitiveservices.azure.com//computervision/imageanalysis:analyze?api-version=REDACTED&features=REDACTED'
-Request method: 'POST'
-Request headers:
-    'Content-Length': '774253'
-    'content-type': 'application/octet-stream'
-    'Accept': 'application/json'
-    'x-ms-client-request-id': '10897db2-cfd7-11f0-a829-cc6b1e805f58'
-    'User-Agent': 'azsdk-python-ai-vision-imageanalysis/1.0.0 Python/3.12.9 (Windows-11-10.0.26200-SP0)'
-    'Ocp-Apim-Subscription-Key': 'REDACTED'
-A body is sent with the request
-✓ Google Vision: Respuesta recibida (1 llamada API)
-DEBUG Google Vision: Texto completo detectado:
-7022924770
-1033720229
-80371261
-1022958578
-1022948756
-7022940613
-17137071
-15825133
-1022994289
-1020794089
-1045046571
-52283717
-1079940717
-1023962306
-1014576991
-DEBUG Google Vision: Detectadas 15 líneas de texto
-DEBUG Google Vision: Línea 1: '7022924770'
-✓ Cédula extraída: '7022924770' (10 dígitos)
-DEBUG Google Vision: Línea 2: '1033720229'
-✓ Cédula extraída: '1033720229' (10 dígitos)
-DEBUG Google Vision: Línea 3: '80371261'
-✓ Cédula extraída: '80371261' (8 dígitos)
-DEBUG Google Vision: Línea 4: '1022958578'
-✓ Cédula extraída: '1022958578' (10 dígitos)
-DEBUG Google Vision: Línea 5: '1022948756'
-✓ Cédula extraída: '1022948756' (10 dígitos)
-DEBUG Google Vision: Línea 6: '7022940613'
-✓ Cédula extraída: '7022940613' (10 dígitos)
-DEBUG Google Vision: Línea 7: '17137071'
-✓ Cédula extraída: '17137071' (8 dígitos)
-DEBUG Google Vision: Línea 8: '15825133'
-✓ Cédula extraída: '15825133' (8 dígitos)
-DEBUG Google Vision: Línea 9: '1022994289'
-✓ Cédula extraída: '1022994289' (10 dígitos)
-DEBUG Google Vision: Línea 10: '1020794089'
-✓ Cédula extraída: '1020794089' (10 dígitos)
-DEBUG Google Vision: Línea 11: '1045046571'
-✓ Cédula extraída: '1045046571' (10 dígitos)
-DEBUG Google Vision: Línea 12: '52283717'
-✓ Cédula extraída: '52283717' (8 dígitos)
-DEBUG Google Vision: Línea 13: '1079940717'
-✓ Cédula extraída: '1079940717' (10 dígitos)
-DEBUG Google Vision: Línea 14: '1023962306'
-✓ Cédula extraída: '1023962306' (10 dígitos)
-DEBUG Google Vision: Línea 15: '1014576991'
-✓ Cédula extraída: '1014576991' (10 dígitos)
-✓ Google Vision: Total llamadas API: 1 (óptimo)
-DEBUG Google Vision: Total cédulas únicas: 15
-Response status: 200
-Response headers:
-    'Content-Length': '4093'
-    'Content-Type': 'application/json; charset=utf-8'
-    'request-id': 'c476c1c3-4727-4ecf-9daf-a48460028305'
-    'x-ms-request-id': 'c476c1c3-4727-4ecf-9daf-a48460028305'
-    'ms-vision-response-time-input-received': 'REDACTED'
-    'ms-vision-response-time-input-processed': 'REDACTED'
-    'api-supported-versions': 'REDACTED'
-    'x-envoy-upstream-service-time': 'REDACTED'
-    'CSP-Billing-Usage': 'REDACTED'
-    'apim-request-id': 'REDACTED'
-    'Strict-Transport-Security': 'REDACTED'
-    'x-content-type-options': 'REDACTED'
-    'x-ms-region': 'REDACTED'
-    'Date': 'Tue, 02 Dec 2025 23:31:49 GMT'
-✓ Azure Vision: Respuesta recibida
-DEBUG Azure Vision: 1 bloques detectados
-DEBUG Azure Vision: Línea detectada: '1022924770' (confidence: 0.95)
-✓ Cédula extraída: '1022924770' (10 dígitos)
-DEBUG Azure Vision: Línea detectada: '1033720229' (confidence: 0.95)
-✓ Cédula extraída: '1033720229' (10 dígitos)
-DEBUG Azure Vision: Línea detectada: '80 371261' (confidence: 0.95)
-✓ Cédula extraída: '80371261' (8 dígitos)
-DEBUG Azure Vision: Línea detectada: '102958578' (confidence: 0.95)
-✓ Cédula extraída: '102958578' (9 dígitos)
-DEBUG Azure Vision: Línea detectada: '1027948756' (confidence: 0.95)
-✓ Cédula extraída: '1027948756' (10 dígitos)
-DEBUG Azure Vision: Línea detectada: '1022940613' (confidence: 0.95)
-✓ Cédula extraída: '1022940613' (10 dígitos)
-DEBUG Azure Vision: Línea detectada: '17137071' (confidence: 0.95)
-✓ Cédula extraída: '17137071' (8 dígitos)
-DEBUG Azure Vision: Línea detectada: '5225133' (confidence: 0.95)
-✓ Cédula extraída: '5225133' (7 dígitos)
-DEBUG Azure Vision: Línea detectada: '1022994289' (confidence: 0.95)
-✓ Cédula extraída: '1022994289' (10 dígitos)
-DEBUG Azure Vision: Línea detectada: '1020794089' (confidence: 0.95)
-✓ Cédula extraída: '1020794089' (10 dígitos)
-DEBUG Azure Vision: Línea detectada: '1045046521' (confidence: 0.95)
-✓ Cédula extraída: '1045046521' (10 dígitos)
-DEBUG Azure Vision: Línea detectada: '52213717' (confidence: 0.95)
-✓ Cédula extraída: '52213717' (8 dígitos)
-DEBUG Azure Vision: Línea detectada: '1079940717' (confidence: 0.95)
-✓ Cédula extraída: '1079940717' (10 dígitos)
-DEBUG Azure Vision: Línea detectada: '1023962306' (confidence: 0.95)
-✓ Cédula extraída: '1023962306' (10 dígitos)
-DEBUG Azure Vision: Línea detectada: '1014576991' (confidence: 0.95)
-✓ Cédula extraída: '1014576991' (10 dígitos)
-DEBUG Azure Vision: Total cédulas únicas: 15
-
-✓ Primary OCR encontró:   15 cédulas
-✓ Secondary OCR encontró: 15 cédulas
-
-======================================================================
-EMPAREJAMIENTO HÍBRIDO (Posición + Similitud)
-======================================================================
-  ✓ Par 1: Primary[0] '1022924770' ↔ Secondary[0] '7022924770' (similitud: 90.0%) [por posición]
-  ✓ Par 2: Primary[1] '1033720229' ↔ Secondary[1] '1033720229' (similitud: 100.0%) [por posición]
-  ✓ Par 3: Primary[2] '80371261' ↔ Secondary[2] '80371261' (similitud: 100.0%) [por posición]
-  ✓ Par 4: Primary[3] '102958578' ↔ Secondary[3] '1022958578' (similitud: 94.7%) [por posición]
-  ✓ Par 5: Primary[4] '1027948756' ↔ Secondary[4] '1022948756' (similitud: 90.0%) [por posición]
-  ✓ Par 6: Primary[5] '1022940613' ↔ Secondary[5] '7022940613' (similitud: 90.0%) [por posición]
-  ✓ Par 7: Primary[6] '17137071' ↔ Secondary[6] '17137071' (similitud: 100.0%) [por posición]
-  ~ Par 8: Primary[7] '5225133' ↔ Secondary[7] '15825133' (similitud: 80.0%) [por posición]
-  ✓ Par 9: Primary[8] '1022994289' ↔ Secondary[8] '1022994289' (similitud: 100.0%) [por posición]
-  ✓ Par 10: Primary[9] '1020794089' ↔ Secondary[9] '1020794089' (similitud: 100.0%) [por posición]
-  ✓ Par 11: Primary[10] '1045046521' ↔ Secondary[10] '1045046571' (similitud: 90.0%) [por posición]
-  ✓ Par 12: Primary[11] '52213717' ↔ Secondary[11] '52283717' (similitud: 87.5%) [por posición]
-  ✓ Par 13: Primary[12] '1079940717' ↔ Secondary[12] '1079940717' (similitud: 100.0%) [por posición]
-  ✓ Par 14: Primary[13] '1023962306' ↔ Secondary[13] '1023962306' (similitud: 100.0%) [por posición]
-  ✓ Par 15: Primary[14] '1014576991' ↔ Secondary[14] '1014576991' (similitud: 100.0%) [por posición]
-
-======================================================================
-RESULTADO EMPAREJAMIENTO: 15 pares encontrados
-======================================================================
-
-✓ Emparejadas: 15 cédulas
-
-
-[1/15] Procesando cédula (posición 0):
-  Primary:   1022924770 (conf: 95.0%)
-  Secondary: 7022924770 (conf: 95.0%)
-
-================================================================================
-COMPARACIÓN DÍGITO POR DÍGITO
-================================================================================
-Primary:   1022924770
-Secondary: 7022924770
-================================================================================
-
-Pos 0: ⚠️ PAR DE CONFUSIÓN DETECTADO: '1' vs '7' (prob confusión: 15.0%)
-         Umbral ajustado: 10.0% → 5.0%
-Pos 0: ⚠️ CONFLICTO RESUELTO Primary='1' (95.20%) Secondary='7' (87.18%) → Elegido '1' de Primary
-Pos 1: COINCIDENCIA '0' Primary=95.20% Secondary=90.96% → Final=96.08%
-Pos 2: COINCIDENCIA '2' Primary=95.20% Secondary=98.85% → Final=99.00%
-Pos 3: COINCIDENCIA '2' Primary=95.20% Secondary=98.46% → Final=99.00%
-Pos 4: COINCIDENCIA '9' Primary=95.20% Secondary=99.41% → Final=99.00%
-Pos 5: COINCIDENCIA '2' Primary=95.20% Secondary=99.25% → Final=99.00%
-Pos 6: COINCIDENCIA '4' Primary=95.20% Secondary=99.36% → Final=99.00%
-Pos 7: COINCIDENCIA '7' Primary=95.20% Secondary=98.62% → Final=99.00%
-Pos 8: COINCIDENCIA '7' Primary=95.20% Secondary=98.76% → Final=99.00%
-Pos 9: COINCIDENCIA '0' Primary=95.20% Secondary=98.56% → Final=99.00%
-
-Pos   Primary         Secondary       Elegido         Tipo
------ --------------- --------------- --------------- ------------
-0     '1' (95.2%)     '7' (87.2%)     '1' (95.2%)     highest_confidence
-1     '0' (95.2%)     '0' (91.0%)     '0' (96.1%)     unanimous
-2     '2' (95.2%)     '2' (98.8%)     '2' (99.0%)     unanimous
-3     '2' (95.2%)     '2' (98.5%)     '2' (99.0%)     unanimous
-4     '9' (95.2%)     '9' (99.4%)     '9' (99.0%)     unanimous
-5     '2' (95.2%)     '2' (99.3%)     '2' (99.0%)     unanimous
-6     '4' (95.2%)     '4' (99.4%)     '4' (99.0%)     unanimous
-7     '7' (95.2%)     '7' (98.6%)     '7' (99.0%)     unanimous
-8     '7' (95.2%)     '7' (98.8%)     '7' (99.0%)     unanimous
-9     '0' (95.2%)     '0' (98.6%)     '0' (99.0%)     unanimous
-
-================================================================================
-ESTADÍSTICAS:
-  Coincidencias: 9/10 (90.0%)
-  Conflictos:    1/10 (10.0%)
-  Confianza promedio: 98.3%
-  → RESULTADO: 1022924770 ✅
-    Confianza: 98.3%
-
-[2/15] Procesando cédula (posición 1):
-  Primary:   1033720229 (conf: 95.0%)
-  Secondary: 1033720229 (conf: 95.0%)
-
-================================================================================
-COMPARACIÓN DÍGITO POR DÍGITO
-================================================================================
-Primary:   1033720229
-Secondary: 1033720229
-================================================================================
-
-Pos 0: Secondary '1' tiene confianza muy baja (40.51% < 65.00%)
-  ⚠️ Combinación rechazada, usando Primary: 1033720229
-    Confianza: 95.0%
-
-[3/15] Procesando cédula (posición 2):
-  Primary:   80371261 (conf: 95.0%)
-  Secondary: 80371261 (conf: 95.0%)
-
-================================================================================
-COMPARACIÓN DÍGITO POR DÍGITO
-================================================================================
-Primary:   80371261
-Secondary: 80371261
-================================================================================
-
-Pos 0: COINCIDENCIA '8' Primary=99.60% Secondary=93.67% → Final=99.00%
-Pos 1: COINCIDENCIA '0' Primary=99.60% Secondary=95.81% → Final=99.00%
-Pos 2: COINCIDENCIA '3' Primary=99.60% Secondary=97.76% → Final=99.00%
-Pos 3: COINCIDENCIA '7' Primary=99.60% Secondary=98.94% → Final=99.00%
-Pos 4: COINCIDENCIA '1' Primary=99.60% Secondary=95.99% → Final=99.00%
-Pos 5: COINCIDENCIA '2' Primary=99.60% Secondary=99.13% → Final=99.00%
-Pos 6: COINCIDENCIA '6' Primary=99.60% Secondary=99.25% → Final=99.00%
-Pos 7: COINCIDENCIA '1' Primary=99.60% Secondary=98.46% → Final=99.00%
-
-Pos   Primary         Secondary       Elegido         Tipo
------ --------------- --------------- --------------- ------------
-0     '8' (99.6%)     '8' (93.7%)     '8' (99.0%)     unanimous
-1     '0' (99.6%)     '0' (95.8%)     '0' (99.0%)     unanimous
-2     '3' (99.6%)     '3' (97.8%)     '3' (99.0%)     unanimous
-3     '7' (99.6%)     '7' (98.9%)     '7' (99.0%)     unanimous
-4     '1' (99.6%)     '1' (96.0%)     '1' (99.0%)     unanimous
-5     '2' (99.6%)     '2' (99.1%)     '2' (99.0%)     unanimous
-6     '6' (99.6%)     '6' (99.3%)     '6' (99.0%)     unanimous   
-7     '1' (99.6%)     '1' (98.5%)     '1' (99.0%)     unanimous
-
-================================================================================
-ESTADÍSTICAS:
-  Coincidencias: 8/8 (100.0%)
-  Conflictos:    0/8 (0.0%)
-  Confianza promedio: 99.0%
-  → RESULTADO: 80371261 ✅
-    Confianza: 99.0%
-
-[4/15] Procesando cédula (posición 3):
-  Primary:   102958578 (conf: 95.0%)
-  Secondary: 1022958578 (conf: 95.0%)
-
-================================================================================
-⚠️ LONGITUDES DIFERENTES - Eligiendo por confianza general
-================================================================================
-Primary:   102958578 (9 dígitos, conf: 95.0%)
-Secondary: 1022958578 (10 dígitos, conf: 95.0%)
-================================================================================
-
-→ ELEGIDO Primary: 102958578 (confianza: 95.0%)
-
-  → RESULTADO: 102958578 ✅
-    Confianza: 95.0%
-
-[5/15] Procesando cédula (posición 4):
-  Primary:   1027948756 (conf: 95.0%)
-  Secondary: 1022948756 (conf: 95.0%)
-
-================================================================================
-COMPARACIÓN DÍGITO POR DÍGITO
-================================================================================
-Primary:   1027948756
-Secondary: 1022948756
-================================================================================
-
-Pos 0: COINCIDENCIA '1' Primary=82.60% Secondary=97.93% → Final=93.26%
-Pos 1: COINCIDENCIA '0' Primary=82.60% Secondary=96.36% → Final=92.48%
-Pos 2: COINCIDENCIA '2' Primary=82.60% Secondary=98.41% → Final=93.50%
-Pos 3: ⚠️ PAR DE CONFUSIÓN DETECTADO: '7' vs '2' (prob confusión: 12.0%)
-         Umbral ajustado: 10.0% → 5.0%
-Pos 3: ⚠️ CONFLICTO RESUELTO Primary='7' (82.60%) Secondary='2' (96.60%) → Elegido '2' de Secondary
-Pos 4: COINCIDENCIA '9' Primary=82.60% Secondary=98.21% → Final=93.41%
-Pos 5: COINCIDENCIA '4' Primary=82.60% Secondary=98.55% → Final=93.58%
-Pos 6: COINCIDENCIA '8' Primary=82.60% Secondary=98.78% → Final=93.69%
-Pos 7: COINCIDENCIA '7' Primary=82.60% Secondary=98.90% → Final=93.75%
-Pos 8: COINCIDENCIA '5' Primary=82.60% Secondary=98.11% → Final=93.36%
-Pos 9: COINCIDENCIA '6' Primary=82.60% Secondary=98.45% → Final=93.53%
-
-Pos   Primary         Secondary       Elegido         Tipo
------ --------------- --------------- --------------- ------------
-0     '1' (82.6%)     '1' (97.9%)     '1' (93.3%)     unanimous
-1     '0' (82.6%)     '0' (96.4%)     '0' (92.5%)     unanimous
-2     '2' (82.6%)     '2' (98.4%)     '2' (93.5%)     unanimous
-3     '7' (82.6%)     '2' (96.6%)     '2' (96.6%)     highest_confidence
-4     '9' (82.6%)     '9' (98.2%)     '9' (93.4%)     unanimous
-5     '4' (82.6%)     '4' (98.6%)     '4' (93.6%)     unanimous   
-6     '8' (82.6%)     '8' (98.8%)     '8' (93.7%)     unanimous   
-7     '7' (82.6%)     '7' (98.9%)     '7' (93.7%)     unanimous   
-8     '5' (82.6%)     '5' (98.1%)     '5' (93.4%)     unanimous
-9     '6' (82.6%)     '6' (98.5%)     '6' (93.5%)     unanimous
-
-================================================================================
-ESTADÍSTICAS:
-  Coincidencias: 9/10 (90.0%)
-  Conflictos:    1/10 (10.0%)
-  Confianza promedio: 93.7%
-  → RESULTADO: 1022948756 ✅
-    Confianza: 93.7%
-
-[6/15] Procesando cédula (posición 5):
-  Primary:   1022940613 (conf: 95.0%)
-  Secondary: 7022940613 (conf: 95.0%)
-
-================================================================================
-COMPARACIÓN DÍGITO POR DÍGITO
-================================================================================
-Primary:   1022940613
-Secondary: 7022940613
-================================================================================
-
-Pos 0: ℹ️ Threshold relajado para Secondary (par de confusión)
-Pos 0: Secondary '7' tiene confianza muy baja (60.41% < 65.00%)
-  ⚠️ Combinación rechazada, usando Primary: 1022940613
-    Confianza: 95.0%
-
-[7/15] Procesando cédula (posición 6):
-  Primary:   17137071 (conf: 95.0%)
-  Secondary: 17137071 (conf: 95.0%)
-
-================================================================================
-COMPARACIÓN DÍGITO POR DÍGITO
-================================================================================
-Primary:   17137071
-Secondary: 17137071
-================================================================================
-
-Pos 0: COINCIDENCIA '1' Primary=96.50% Secondary=96.08% → Final=99.00%
-Pos 1: COINCIDENCIA '7' Primary=96.50% Secondary=97.84% → Final=99.00%
-Pos 2: COINCIDENCIA '1' Primary=96.50% Secondary=97.33% → Final=99.00%
-Pos 3: COINCIDENCIA '3' Primary=96.50% Secondary=99.56% → Final=99.00%
-Pos 4: COINCIDENCIA '7' Primary=96.50% Secondary=99.21% → Final=99.00%
-Pos 5: COINCIDENCIA '0' Primary=96.50% Secondary=99.36% → Final=99.00%
-Pos 6: COINCIDENCIA '7' Primary=96.50% Secondary=99.03% → Final=99.00%
-Pos 7: COINCIDENCIA '1' Primary=96.50% Secondary=98.92% → Final=99.00%
-
-Pos   Primary         Secondary       Elegido         Tipo
------ --------------- --------------- --------------- ------------
-0     '1' (96.5%)     '1' (96.1%)     '1' (99.0%)     unanimous
-1     '7' (96.5%)     '7' (97.8%)     '7' (99.0%)     unanimous   
-2     '1' (96.5%)     '1' (97.3%)     '1' (99.0%)     unanimous   
-3     '3' (96.5%)     '3' (99.6%)     '3' (99.0%)     unanimous   
-4     '7' (96.5%)     '7' (99.2%)     '7' (99.0%)     unanimous
-5     '0' (96.5%)     '0' (99.4%)     '0' (99.0%)     unanimous
-6     '7' (96.5%)     '7' (99.0%)     '7' (99.0%)     unanimous   
-7     '1' (96.5%)     '1' (98.9%)     '1' (99.0%)     unanimous
-
-================================================================================
-ESTADÍSTICAS:
-  Coincidencias: 8/8 (100.0%)
-  Conflictos:    0/8 (0.0%)
-  Confianza promedio: 99.0%
-  → RESULTADO: 17137071 ✅
-    Confianza: 99.0%
-
-[8/15] Procesando cédula (posición 7):
-  Primary:   5225133 (conf: 95.0%)
-  Secondary: 15825133 (conf: 95.0%)
-
-================================================================================
-⚠️ LONGITUDES DIFERENTES - Eligiendo por confianza general
-================================================================================
-Primary:   5225133 (7 dígitos, conf: 95.0%)
-Secondary: 15825133 (8 dígitos, conf: 95.0%)
-================================================================================
-
-→ ELEGIDO Primary: 5225133 (confianza: 95.0%)
-
-  → RESULTADO: 5225133 ✅
-    Confianza: 95.0%
-
-[9/15] Procesando cédula (posición 8):
-  Primary:   1022994289 (conf: 95.0%)
-  Secondary: 1022994289 (conf: 95.0%)
-
-================================================================================
-COMPARACIÓN DÍGITO POR DÍGITO
-================================================================================
-Primary:   1022994289
-Secondary: 1022994289
-================================================================================
-
-Pos 0: COINCIDENCIA '1' Primary=99.20% Secondary=95.25% → Final=99.00%
-Pos 1: COINCIDENCIA '0' Primary=99.20% Secondary=96.32% → Final=99.00%
-Pos 2: COINCIDENCIA '2' Primary=99.20% Secondary=97.30% → Final=99.00%
-Pos 3: COINCIDENCIA '2' Primary=99.20% Secondary=98.81% → Final=99.00%
-Pos 4: COINCIDENCIA '9' Primary=99.20% Secondary=97.34% → Final=99.00%
-Pos 5: COINCIDENCIA '9' Primary=99.20% Secondary=98.47% → Final=99.00%
-Pos 6: COINCIDENCIA '4' Primary=99.20% Secondary=98.25% → Final=99.00%
-Pos 7: COINCIDENCIA '2' Primary=99.20% Secondary=98.60% → Final=99.00%
-Pos 8: COINCIDENCIA '8' Primary=99.20% Secondary=97.32% → Final=99.00%
-Pos 9: COINCIDENCIA '9' Primary=99.20% Secondary=96.98% → Final=99.00%
-
-Pos   Primary         Secondary       Elegido         Tipo
------ --------------- --------------- --------------- ------------
-0     '1' (99.2%)     '1' (95.3%)     '1' (99.0%)     unanimous
-1     '0' (99.2%)     '0' (96.3%)     '0' (99.0%)     unanimous
-2     '2' (99.2%)     '2' (97.3%)     '2' (99.0%)     unanimous
-3     '2' (99.2%)     '2' (98.8%)     '2' (99.0%)     unanimous
-4     '9' (99.2%)     '9' (97.3%)     '9' (99.0%)     unanimous
-5     '9' (99.2%)     '9' (98.5%)     '9' (99.0%)     unanimous
-6     '4' (99.2%)     '4' (98.3%)     '4' (99.0%)     unanimous
-7     '2' (99.2%)     '2' (98.6%)     '2' (99.0%)     unanimous
-8     '8' (99.2%)     '8' (97.3%)     '8' (99.0%)     unanimous
-9     '9' (99.2%)     '9' (97.0%)     '9' (99.0%)     unanimous
-
-================================================================================
-ESTADÍSTICAS:
-  Coincidencias: 10/10 (100.0%)
-  Conflictos:    0/10 (0.0%)
-  Confianza promedio: 99.0%
-  → RESULTADO: 1022994289 ✅
-    Confianza: 99.0%
-
-[10/15] Procesando cédula (posición 9):
-  Primary:   1020794089 (conf: 95.0%)
-  Secondary: 1020794089 (conf: 95.0%)
-
-================================================================================
-COMPARACIÓN DÍGITO POR DÍGITO
-================================================================================
-Primary:   1020794089
-Secondary: 1020794089
-================================================================================
-
-Pos 0: COINCIDENCIA '1' Primary=99.20% Secondary=94.81% → Final=99.00%
-Pos 1: COINCIDENCIA '0' Primary=99.20% Secondary=96.69% → Final=99.00%
-Pos 2: COINCIDENCIA '2' Primary=99.20% Secondary=95.92% → Final=99.00%
-Pos 3: COINCIDENCIA '0' Primary=99.20% Secondary=97.26% → Final=99.00%
-Pos 4: COINCIDENCIA '7' Primary=99.20% Secondary=98.19% → Final=99.00%
-Pos 5: COINCIDENCIA '9' Primary=99.20% Secondary=98.91% → Final=99.00%
-Pos 6: COINCIDENCIA '4' Primary=99.20% Secondary=99.11% → Final=99.00%
-Pos 7: COINCIDENCIA '0' Primary=99.20% Secondary=98.52% → Final=99.00%
-Pos 8: COINCIDENCIA '8' Primary=99.20% Secondary=98.57% → Final=99.00%
-Pos 9: COINCIDENCIA '9' Primary=99.20% Secondary=92.69% → Final=98.94%
-
-Pos   Primary         Secondary       Elegido         Tipo
------ --------------- --------------- --------------- ------------
-0     '1' (99.2%)     '1' (94.8%)     '1' (99.0%)     unanimous
-1     '0' (99.2%)     '0' (96.7%)     '0' (99.0%)     unanimous
-2     '2' (99.2%)     '2' (95.9%)     '2' (99.0%)     unanimous
-3     '0' (99.2%)     '0' (97.3%)     '0' (99.0%)     unanimous
-4     '7' (99.2%)     '7' (98.2%)     '7' (99.0%)     unanimous
-5     '9' (99.2%)     '9' (98.9%)     '9' (99.0%)     unanimous
-6     '4' (99.2%)     '4' (99.1%)     '4' (99.0%)     unanimous
-7     '0' (99.2%)     '0' (98.5%)     '0' (99.0%)     unanimous
-8     '8' (99.2%)     '8' (98.6%)     '8' (99.0%)     unanimous
-9     '9' (99.2%)     '9' (92.7%)     '9' (98.9%)     unanimous
-
-================================================================================
-ESTADÍSTICAS:
-  Coincidencias: 10/10 (100.0%)
-  Conflictos:    0/10 (0.0%)
-  Confianza promedio: 99.0%
-  → RESULTADO: 1020794089 ✅
-    Confianza: 99.0%
-
-[11/15] Procesando cédula (posición 10):
-  Primary:   1045046521 (conf: 95.0%)
-  Secondary: 1045046571 (conf: 95.0%)
-
-================================================================================
-COMPARACIÓN DÍGITO POR DÍGITO
-================================================================================
-Primary:   1045046521
-Secondary: 1045046571
-================================================================================
-
-Pos 0: COINCIDENCIA '1' Primary=83.20% Secondary=96.56% → Final=92.88%
-Pos 1: COINCIDENCIA '0' Primary=83.20% Secondary=97.80% → Final=93.50%
-Pos 2: COINCIDENCIA '4' Primary=83.20% Secondary=97.13% → Final=93.17%
-Pos 3: COINCIDENCIA '5' Primary=83.20% Secondary=97.95% → Final=93.58%
-Pos 4: COINCIDENCIA '0' Primary=83.20% Secondary=87.76% → Final=88.48%
-Pos 5: COINCIDENCIA '4' Primary=83.20% Secondary=97.84% → Final=93.52%
-Pos 6: COINCIDENCIA '6' Primary=83.20% Secondary=97.66% → Final=93.43%
-Pos 7: COINCIDENCIA '5' Primary=83.20% Secondary=94.37% → Final=91.79%
-Pos 8: ⚠️ PAR DE CONFUSIÓN DETECTADO: '2' vs '7' (prob confusión: 12.0%)
-         Umbral ajustado: 10.0% → 5.0%
-Pos 8: ⚠️ CONFLICTO RESUELTO Primary='2' (83.20%) Secondary='7' (75.82%) → Elegido '2' de Primary
-Pos 9: COINCIDENCIA '1' Primary=83.20% Secondary=86.58% → Final=87.89%
-
-Pos   Primary         Secondary       Elegido         Tipo
------ --------------- --------------- --------------- ------------
-0     '1' (83.2%)     '1' (96.6%)     '1' (92.9%)     unanimous   
-1     '0' (83.2%)     '0' (97.8%)     '0' (93.5%)     unanimous
-2     '4' (83.2%)     '4' (97.1%)     '4' (93.2%)     unanimous
-3     '5' (83.2%)     '5' (98.0%)     '5' (93.6%)     unanimous
-4     '0' (83.2%)     '0' (87.8%)     '0' (88.5%)     unanimous
-5     '4' (83.2%)     '4' (97.8%)     '4' (93.5%)     unanimous
-6     '6' (83.2%)     '6' (97.7%)     '6' (93.4%)     unanimous
-7     '5' (83.2%)     '5' (94.4%)     '5' (91.8%)     unanimous
-8     '2' (83.2%)     '7' (75.8%)     '2' (83.2%)     highest_confidence
-9     '1' (83.2%)     '1' (86.6%)     '1' (87.9%)     unanimous
-
-================================================================================
-ESTADÍSTICAS:
-  Coincidencias: 9/10 (90.0%)
-  Conflictos:    1/10 (10.0%)
-  Confianza promedio: 91.1%
-  → RESULTADO: 1045046521 ✅
-    Confianza: 91.1%
-
-[12/15] Procesando cédula (posición 11):
-  Primary:   52213717 (conf: 95.0%)
-  Secondary: 52283717 (conf: 95.0%)
-
-================================================================================
-COMPARACIÓN DÍGITO POR DÍGITO
-================================================================================
-Primary:   52213717
-Secondary: 52283717
-================================================================================
-
-Pos 0: COINCIDENCIA '5' Primary=75.10% Secondary=97.43% → Final=89.27%
-Pos 1: COINCIDENCIA '2' Primary=75.10% Secondary=94.90% → Final=88.00%
-Pos 2: COINCIDENCIA '2' Primary=75.10% Secondary=94.51% → Final=87.81%
-Pos 3: CONFLICTO AMBIGUO Primary='1' (75.10%) Secondary='8' (73.34%) Diferencia=1.76% < 10.00% → RECHAZADO
-  ⚠️ Combinación rechazada, usando Primary: 52213717
-    Confianza: 95.0%
-
-[13/15] Procesando cédula (posición 12):
-  Primary:   1079940717 (conf: 95.0%)
-  Secondary: 1079940717 (conf: 95.0%)
-
-================================================================================
-COMPARACIÓN DÍGITO POR DÍGITO
-================================================================================
-Primary:   1079940717
-Secondary: 1079940717
-================================================================================
-
-Pos 0: COINCIDENCIA '1' Primary=98.10% Secondary=95.72% → Final=99.00%
-Pos 1: COINCIDENCIA '0' Primary=98.10% Secondary=97.22% → Final=99.00%
-Pos 2: Secondary '7' tiene confianza muy baja (57.84% < 65.00%)
-  ⚠️ Combinación rechazada, usando Primary: 1079940717
-    Confianza: 95.0%
-
-[14/15] Procesando cédula (posición 13):
-  Primary:   1023962306 (conf: 95.0%)
-  Secondary: 1023962306 (conf: 95.0%)
-
-================================================================================
-COMPARACIÓN DÍGITO POR DÍGITO
-================================================================================
-Primary:   1023962306
-Secondary: 1023962306
-================================================================================
-
-Pos 0: Secondary '1' tiene confianza muy baja (45.11% < 65.00%)
-  ⚠️ Combinación rechazada, usando Primary: 1023962306
-    Confianza: 95.0%
-
-[15/15] Procesando cédula (posición 14):
-  Primary:   1014576991 (conf: 95.0%)
-  Secondary: 1014576991 (conf: 95.0%)
-
-================================================================================
-COMPARACIÓN DÍGITO POR DÍGITO
-================================================================================
-Primary:   1014576991
-Secondary: 1014576991
-================================================================================
-
-Pos 0: COINCIDENCIA '1' Primary=76.80% Secondary=89.04% → Final=85.92%
-Pos 1: COINCIDENCIA '0' Primary=76.80% Secondary=93.73% → Final=88.27%
-Pos 2: Secondary '1' tiene confianza muy baja (56.35% < 65.00%)
-  ⚠️ Combinación rechazada, usando Primary: 1014576991
-    Confianza: 95.0%
-  ℹ️ Diferencia mínima (0) entre OCRs → NO se agregan cédulas sin par
-
-======================================================================
-RESULTADO FINAL: 15 cédulas extraídas con alta confianza
-======================================================================
+# ROLLBACK COMPLETO: Eliminar Document AI del Proyecto
+
+## 🚨 CONTEXTO URGENTE
+
+**Problema:** Document AI resultó ser MUY costoso
+- 5 llamadas = $500 COP
+- Inviable para producción con miles de formularios
+- API ya desactivada en Google Cloud
+
+**Acción requerida:** Eliminar TODO rastro de Document AI del código
+
+---
+
+## 🎯 OBJETIVO
+
+Limpiar completamente el proyecto de cualquier integración con Document AI:
+- ✅ Eliminar archivos relacionados
+- ✅ Eliminar imports y referencias
+- ✅ Eliminar configuración
+- ✅ Eliminar dependencias
+- ✅ Verificar que no quede nada
+
+---
+
+## 🗑️ ARCHIVOS A ELIMINAR COMPLETAMENTE
+
+### 1. Adapters de Document AI
+```bash
+# ELIMINAR estos archivos:
+src/infrastructure/ocr/document_ai_adapter.py
+src/infrastructure/ocr/document_ai_*.py
+```
+
+### 2. Modelos relacionados (si existen)
+```bash
+# ELIMINAR si fueron creados:
+src/domain/models/cedula_pair.py  # Solo si fue creado para Document AI
+```
+
+### 3. Tests de Document AI
+```bash
+# ELIMINAR:
+tests/test_document_ai.py
+tests/test_document_ai_*.py
+```
+
+### 4. Scripts de migración
+```bash
+# ELIMINAR cualquier script de migración:
+scripts/migrate_to_document_ai.py
+scripts/test_document_ai.py
+```
+
+---
+
+## 🔧 ARCHIVOS A MODIFICAR
+
+### 1. `requirements.txt`
+**ELIMINAR esta línea:**
+```txt
+google-cloud-documentai>=2.16.0
+```
+
+**Ejecutar después:**
+```bash
+pip uninstall google-cloud-documentai -y
+```
+
+---
+
+### 2. `src/config/settings.py`
+**ELIMINAR toda la sección de Document AI:**
+
+```python
+# ❌ ELIMINAR COMPLETAMENTE ESTE BLOQUE:
+@dataclass
+class DocumentAIConfig:
+    """Configuración para Document AI"""
+    project_id: str
+    location: str
+    processor_id: str
+    
+    @classmethod
+    def from_env(cls):
+        return cls(
+            project_id=os.getenv("GCP_PROJECT_ID", "your-project-id"),
+            location=os.getenv("DOCUMENT_AI_LOCATION", "us"),
+            processor_id=os.getenv("DOCUMENT_AI_PROCESSOR_ID", "9c723fcb489ce9a4")
+        )
+
+# ❌ ELIMINAR ESTA LÍNEA:
+DOCUMENT_AI_CONFIG = DocumentAIConfig.from_env()
+```
+
+---
+
+### 3. `src/application/services/ocr_service.py`
+
+**ELIMINAR imports de Document AI:**
+```python
+# ❌ ELIMINAR:
+from ..infrastructure.ocr.document_ai_adapter import DocumentAIAdapter
+```
+
+**ELIMINAR del constructor:**
+```python
+# ❌ ELIMINAR este parámetro:
+def __init__(self, document_ai_adapter: DocumentAIAdapter):
+    self.document_ai = document_ai_adapter
+```
+
+**ELIMINAR métodos relacionados:**
+```python
+# ❌ ELIMINAR estos métodos si existen:
+def process_form_e11(self, image_path: str) -> List[str]:
+    # Todo el método que usa document_ai
+    
+def extract_cedulas_with_names(self, ...):
+    # Si usa Document AI
+```
+
+---
+
+### 4. `.env`
+**ELIMINAR estas variables:**
+```bash
+# ❌ ELIMINAR:
+DOCUMENT_AI_LOCATION=us
+DOCUMENT_AI_PROCESSOR_ID=9c723fcb489ce9a4
+```
+
+---
+
+### 5. `README.md` o documentación
+**ELIMINAR cualquier mención a:**
+- Document AI
+- Form Parser
+- Processor ID: 9c723fcb489ce9a4
+- Costos de Document AI
+- Instrucciones de configuración de Document AI
+
+---
+
+## 🔍 BÚSQUEDA EXHAUSTIVA
+
+Ejecutar estos comandos para encontrar cualquier referencia restante:
+
+```bash
+# Buscar "document_ai" en todo el proyecto
+grep -r "document_ai" src/ tests/ scripts/
+
+# Buscar "documentai" (sin guión bajo)
+grep -r "documentai" src/ tests/ scripts/
+
+# Buscar "DocumentAI" (camelCase)
+grep -r "DocumentAI" src/ tests/ scripts/
+
+# Buscar el processor ID específico
+grep -r "9c723fcb489ce9a4" .
+
+# Buscar "Form Parser"
+grep -r "Form Parser" src/ tests/ scripts/ docs/
+```
+
+**Si alguno de estos comandos retorna resultados:** ELIMINAR esas referencias también.
+
+---
+
+## ✅ VERIFICACIÓN POST-ELIMINACIÓN
+
+### Checklist final:
+
+- [ ] No existe `document_ai_adapter.py`
+- [ ] No hay imports de `documentai`
+- [ ] `requirements.txt` no tiene `google-cloud-documentai`
+- [ ] `.env` no tiene variables `DOCUMENT_AI_*`
+- [ ] `grep -r "document_ai" src/` retorna 0 resultados
+- [ ] `grep -r "9c723fcb489ce9a4" .` retorna 0 resultados
+- [ ] El proyecto sigue funcionando con el OCR anterior
+
+---
+
+## 🔄 RESTAURAR CONFIGURACIÓN ANTERIOR
+
+Si se modificó `ocr_service.py` para usar Document AI, **restaurar a:**
+
+```python
+# RESTAURAR configuración previa (Google Vision + Azure)
+from ..infrastructure.ocr.google_vision_adapter import GoogleVisionAdapter
+from ..infrastructure.ocr.azure_vision_adapter import AzureVisionAdapter
+from ..infrastructure.ocr.ensemble_ocr import DigitLevelEnsembleOCR
+
+class OCRService:
+    def __init__(
+        self, 
+        google_adapter: GoogleVisionAdapter,
+        azure_adapter: AzureVisionAdapter
+    ):
+        self.google_ocr = google_adapter
+        self.azure_ocr = azure_adapter
+        self.ensemble = DigitLevelEnsembleOCR(
+            google_adapter,
+            azure_adapter
+        )
+    
+    def process_form(self, image_path: str) -> List[str]:
+        """Procesar formulario con Dual Ensemble (Google + Azure)"""
+        # Lógica original del Dual Ensemble
+        cedulas = self.ensemble.extract_cedulas(image_path)
+        return cedulas
+```
+
+---
+
+## 📝 ACTUALIZAR DOCUMENTACIÓN
+
+### En `README.md` o docs principales:
+
+**ELIMINAR:**
+```markdown
+### Document AI Integration
+- Processor ID: 9c723fcb489ce9a4
+- Cost: ~$X per 1000 images
+```
+
+**MANTENER/RESTAURAR:**
+```markdown
+### OCR Engine: Dual Ensemble
+- Google Vision API: $5 COP/1000 imágenes
+- Azure Computer Vision: $3.44 COP/1000 imágenes
+- Total: $8.60 COP/1000 imágenes ✅ Económico
+- Precisión: 98.5-99%
+```
+
+---
+
+## 🧪 TESTING POST-LIMPIEZA
+
+Después de eliminar todo, ejecutar:
+
+```bash
+# 1. Verificar que no hay imports rotos
+python -m py_compile src/**/*.py
+
+# 2. Ejecutar tests existentes
+pytest tests/
+
+# 3. Verificar que el OCR original funciona
+python scripts/test_ocr_original.py
+
+# 4. Verificar dependencias
+pip check
+```
+
+---
+
+## 📊 RESUMEN DE COSTOS
+
+### Document AI (DESCARTADO ❌)
+- 5 llamadas = $500 COP
+- 1000 llamadas = $100,000 COP 💸
+- **INVIABLE para producción**
+
+### Dual Ensemble (ACTUAL ✅)
+- 1000 imágenes = $8.60 COP
+- 5000 imágenes/mes = $43 COP
+- **ECONÓMICO y ESCALABLE**
+
+---
+
+## ⚠️ IMPORTANTE
+
+**NO eliminar:**
+- ❌ Google Vision API adapter (necesario)
+- ❌ Azure Vision API adapter (necesario)
+- ❌ Ensemble OCR logic (necesario)
+- ❌ Preprocesamiento de imágenes (necesario)
+
+**SÍ eliminar:**
+- ✅ TODO lo relacionado con Document AI
+- ✅ TODO lo relacionado con Form Parser
+- ✅ TODO lo relacionado con processor 9c723fcb489ce9a4
+
+---
+
+## 🎯 RESULTADO ESPERADO
+
+Después de este rollback:
+- ✅ Proyecto sin rastros de Document AI
+- ✅ Dual Ensemble funcionando (Google + Azure)
+- ✅ Costos controlados ($8.60/1000 imgs)
+- ✅ Código limpio y mantenible
+- ✅ Sin dependencias innecesarias
+
+---
+
+## 🚀 PRÓXIMOS PASOS (DESPUÉS DEL ROLLBACK)
+
+1. **Confirmar que Dual Ensemble funciona correctamente**
+2. **Optimizar extracción de nombres** con el sistema actual
+3. **Implementar API REST** con FastAPI
+4. **Trabajar en auto-corrección** con Registraduría
+5. **Escalar a formato E-14**
+
+---
+
+## 📞 COMANDOS RÁPIDOS PARA CLAUDE CODE
+
+### Opción 1: Comando directo
+```
+Elimina COMPLETAMENTE toda integración con Document AI del proyecto:
+1. Elimina document_ai_adapter.py y cualquier archivo relacionado
+2. Elimina imports de documentai en todos los archivos
+3. Elimina configuración de Document AI en settings.py
+4. Elimina google-cloud-documentai de requirements.txt
+5. Busca y elimina CUALQUIER referencia restante a "document_ai", "documentai" o "9c723fcb489ce9a4"
+6. Verifica que no quede ningún rastro con grep
+7. Confirma que el proyecto compila sin errores
+```
+
+### Opción 2: Paso a paso
+```
+PASO 1: Busca todos los archivos que contengan "document_ai" o "documentai"
+PASO 2: Elimina esos archivos completamente
+PASO 3: Busca imports de documentai y elimínalos
+PASO 4: Limpia requirements.txt y .env
+PASO 5: Ejecuta grep para verificar que no quede nada
+PASO 6: Compila el proyecto y confirma que funciona
+```
+
+---
+
+**Fecha:** 2025-12-02  
+**Acción:** ROLLBACK COMPLETO de Document AI  
+**Razón:** Costos prohibitivos ($500/5 llamadas)  
+**Sistema a mantener:** Dual Ensemble (Google Vision + Azure Vision)
