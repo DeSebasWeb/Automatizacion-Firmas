@@ -17,6 +17,19 @@ from ...domain.ports import ConfigPort
 from .base_ocr_adapter import BaseOCRAdapter
 from .image_converter import ImageConverter
 from .vision import AzureWordExtractor, ConfidenceMapper
+from ...shared.logging import (
+    LoggerFactory,
+    log_operation,
+    log_info_message,
+    log_warning_message,
+    log_error_message,
+    log_debug_message,
+    log_api_call,
+    log_api_response,
+    log_success,
+    log_failure,
+    log_ocr_extraction
+)
 
 
 class AzureVisionAdapter(BaseOCRAdapter):
@@ -64,6 +77,9 @@ class AzureVisionAdapter(BaseOCRAdapter):
         # Inicializar clase base (preprocessor, config, last_raw_response)
         super().__init__(config)
 
+        # Inicializar logger
+        self.logger = LoggerFactory.get_ocr_logger("azure_vision")
+
         self.client = None
         self.endpoint = None
         self.max_retries = self.config.get('ocr.azure_vision.max_retries', 3)
@@ -82,7 +98,7 @@ class AzureVisionAdapter(BaseOCRAdapter):
         Raises:
             ValueError: Si no se encuentran las credenciales
         """
-        print("DEBUG Azure Vision: Inicializando cliente...")
+        self.logger.debug("Inicializando cliente Azure Vision")
 
         # 1. Intentar desde variables de entorno
         endpoint = os.getenv('AZURE_VISION_ENDPOINT')
@@ -105,18 +121,13 @@ class AzureVisionAdapter(BaseOCRAdapter):
 
         # Validar que tenemos las credenciales
         if not endpoint or not subscription_key:
-            error_msg = (
-                "ERROR Azure Vision: Faltan credenciales.\n\n"
-                "💡 Configura las variables de entorno:\n"
-                "   AZURE_VISION_ENDPOINT=https://tu-recurso.cognitiveservices.azure.com/\n"
-                "   AZURE_VISION_KEY=tu_subscription_key\n\n"
-                "O agrega en config/settings.yaml:\n"
-                "   ocr:\n"
-                "     azure_vision:\n"
-                "       endpoint: https://tu-recurso.cognitiveservices.azure.com/\n"
-                "       subscription_key: tu_key\n"
+            self.logger.error(
+                "Credenciales de Azure Vision no configuradas",
+                solutions=[
+                    "Configura AZURE_VISION_ENDPOINT y AZURE_VISION_KEY",
+                    "O agrega credenciales en config/settings.yaml"
+                ]
             )
-            print(error_msg)
             raise ValueError("Credenciales de Azure Vision no configuradas")
 
         try:
@@ -127,16 +138,24 @@ class AzureVisionAdapter(BaseOCRAdapter):
             )
             self.endpoint = endpoint
 
-            print("✓ Azure Computer Vision inicializado correctamente")
-            print(f"✓ Endpoint: {endpoint}")
-            print("✓ Read API v4.0 - Optimizado para texto manuscrito")
+            self.logger.info(
+                "Azure Computer Vision inicializado correctamente",
+                endpoint=endpoint,
+                api_version="Read API v4.0",
+                optimized_for="handwritten_text"
+            )
 
         except Exception as e:
-            print(f"ERROR Azure Vision: No se pudo inicializar: {e}")
-            print("\n💡 Soluciones:")
-            print("   1. Verifica que el endpoint sea correcto")
-            print("   2. Verifica que la subscription key sea válida")
-            print("   3. Asegúrate de tener Computer Vision API habilitado en Azure")
+            self.logger.error(
+                "Error al inicializar Azure Computer Vision",
+                error_type=type(e).__name__,
+                error_message=str(e),
+                solutions=[
+                    "Verifica que el endpoint sea correcto",
+                    "Verifica que la subscription key sea válida",
+                    "Asegúrate de tener Computer Vision API habilitado en Azure"
+                ]
+            )
             raise
 
     def _call_ocr_api(self, image_bytes: bytes) -> any:
@@ -178,71 +197,105 @@ class AzureVisionAdapter(BaseOCRAdapter):
             Lista de CedulaRecord extraídos
         """
         if self.client is None:
-            print("ERROR: Azure Computer Vision no está inicializado")
+            self.logger.error("Azure Computer Vision no esta inicializado")
             return []
 
-        print("DEBUG Azure Vision: Iniciando extracción de cédulas...")
-        print("DEBUG Azure Vision: Enviando imagen a Read API v4.0")
+        with log_operation(
+            self.logger,
+            "extract_cedulas",
+            image_size=f"{image.width}x{image.height}"
+        ) as op:
+            try:
+                # Preprocesar imagen usando método heredado
+                processed_image = self.preprocess_image(image)
 
-        try:
-            # Preprocesar imagen usando método heredado
-            processed_image = self.preprocess_image(image)
+                # Convertir imagen PIL a bytes usando ImageConverter
+                img_bytes = ImageConverter.pil_to_bytes(processed_image, format='PNG')
 
-            # Convertir imagen PIL a bytes usando ImageConverter
-            img_bytes = ImageConverter.pil_to_bytes(processed_image, format='PNG')
+                # Llamar a Azure Read API
+                log_api_call(self.logger, "azure_vision", "analyze", feature="READ", api_version="v4.0")
+                result = self._call_ocr_api(img_bytes)
 
-            # Llamar a Azure Read API
-            print("DEBUG Azure Vision: Llamando a analyze() con feature READ...")
-            result = self._call_ocr_api(img_bytes)
+                # Guardar respuesta completa para análisis de confianza por dígito
+                self.last_raw_response = result
 
-            # Guardar respuesta completa para análisis de confianza por dígito
-            self.last_raw_response = result
+                log_api_response(self.logger, "azure_vision", True, api_calls=1)
 
-            print("✓ Azure Vision: Respuesta recibida")
+                # Procesar resultados
+                records = []
 
-            # Procesar resultados
-            records = []
+                if result.read and result.read.blocks:
+                    self.logger.debug(
+                        "Bloques detectados por Azure Vision",
+                        bloques_count=len(result.read.blocks)
+                    )
 
-            if result.read and result.read.blocks:
-                print(f"DEBUG Azure Vision: {len(result.read.blocks)} bloques detectados")
+                    for block in result.read.blocks:
+                        for line in block.lines:
+                            text = line.text
+                            confidence = line.confidence if hasattr(line, 'confidence') else 0.95
 
-                for block in result.read.blocks:
-                    for line in block.lines:
-                        text = line.text
-                        confidence = line.confidence if hasattr(line, 'confidence') else 0.95
+                            self.logger.debug(
+                                "Linea detectada",
+                                text=text,
+                                confidence=round(confidence, 2)
+                            )
 
-                        print(f"DEBUG Azure Vision: Línea detectada: '{text}' (confidence: {confidence:.2f})")
+                            # Extraer números del texto usando método heredado
+                            numbers = self._extract_numbers_from_text(text)
 
-                        # Extraer números del texto usando método heredado
-                        numbers = self._extract_numbers_from_text(text)
+                            for num in numbers:
+                                # Validar longitud de cédula colombiana (3-11 dígitos)
+                                if 3 <= len(num) <= 11:
+                                    # Usar factory method para crear con Value Objects
+                                    record = CedulaRecord.from_primitives(
+                                        cedula=num,
+                                        confidence=confidence * 100  # Convertir a porcentaje
+                                    )
+                                    records.append(record)
+                                    log_success(
+                                        self.logger,
+                                        "cedula_extraida",
+                                        cedula=num,
+                                        digits=len(num),
+                                        confidence=round(confidence, 2)
+                                    )
+                                elif len(num) < 3:
+                                    log_failure(
+                                        self.logger,
+                                        "cedula_descartada",
+                                        reason="too_short",
+                                        cedula=num,
+                                        length=len(num)
+                                    )
+                                else:
+                                    log_failure(
+                                        self.logger,
+                                        "cedula_descartada",
+                                        reason="too_long",
+                                        cedula=num,
+                                        length=len(num)
+                                    )
 
-                        for num in numbers:
-                            # Validar longitud de cédula colombiana (3-11 dígitos)
-                            if 3 <= len(num) <= 11:
-                                # Usar factory method para crear con Value Objects
-                                record = CedulaRecord.from_primitives(
-                                    cedula=num,
-                                    confidence=confidence * 100  # Convertir a porcentaje
-                                )
-                                records.append(record)
-                                print(f"✓ Cédula extraída: '{num}' ({len(num)} dígitos)")
-                            elif len(num) < 3:
-                                print(f"✗ Descartada (muy corta): '{num}' ({len(num)} dígitos)")
-                            else:
-                                print(f"✗ Descartada (muy larga): '{num}' ({len(num)} dígitos)")
+                # Eliminar duplicados usando método heredado
+                unique_records = self._remove_duplicates(records)
 
-            # Eliminar duplicados usando método heredado
-            unique_records = self._remove_duplicates(records)
+                # Agregar métricas a la operación
+                op.add_metric("cedulas_extraidas", len(unique_records))
+                op.add_metric("cedulas_duplicadas", len(records) - len(unique_records))
 
-            print(f"DEBUG Azure Vision: Total cédulas únicas: {len(unique_records)}")
+                log_ocr_extraction(
+                    self.logger,
+                    "azure_vision",
+                    len(unique_records),
+                    duplicates=len(records) - len(unique_records)
+                )
 
-            return unique_records
+                return unique_records
 
-        except Exception as e:
-            print(f"ERROR Azure Vision: {e}")
-            import traceback
-            traceback.print_exc()
-            return []
+            except Exception as e:
+                log_error_message(self.logger, "Error en extraccion de cedulas", error=e)
+                return []
 
     def extract_full_form_data(
         self,
@@ -266,65 +319,94 @@ class AzureVisionAdapter(BaseOCRAdapter):
             Lista de RowData, uno por renglón
         """
         if self.client is None:
-            print("ERROR: Azure Computer Vision no está inicializado")
+            self.logger.error("Azure Computer Vision no esta inicializado")
             return []
 
-        print(f"\nDEBUG Azure Vision: Extrayendo formulario completo ({expected_rows} renglones)")
-        print("DEBUG Azure Vision: Enviando imagen COMPLETA a API (1 sola llamada)")
+        with log_operation(
+            self.logger,
+            "extract_full_form_data",
+            image_size=f"{image.width}x{image.height}",
+            expected_rows=expected_rows
+        ) as op:
+            try:
+                log_processing_step(
+                    self.logger,
+                    "Enviando imagen completa a Azure Vision API",
+                    step_number=1,
+                    optimization="single_api_call"
+                )
 
-        try:
-            # Preprocesar imagen
-            processed_image = self.preprocess_image(image)
+                # Preprocesar imagen
+                processed_image = self.preprocess_image(image)
 
-            # Convertir a bytes
-            img_bytes = ImageConverter.pil_to_bytes(processed_image, format='PNG')
+                # Convertir a bytes
+                img_bytes = ImageConverter.pil_to_bytes(processed_image, format='PNG')
 
-            # Llamar a Azure Read API
-            print("DEBUG Azure Vision: Llamando a analyze() con feature READ...")
-            result = self._call_ocr_api(img_bytes)
+                # Llamar a Azure Read API
+                log_api_call(self.logger, "azure_vision", "analyze", feature="READ", api_version="v4.0")
+                result = self._call_ocr_api(img_bytes)
 
-            print("✓ Azure Vision: Respuesta recibida (1 llamada API)")
+                log_api_response(self.logger, "azure_vision", True, api_calls=1, optimization="single_call")
 
-            # Extraer bloques con coordenadas
-            all_blocks = self._extract_text_blocks_with_coords(result)
+                # Extraer bloques con coordenadas
+                all_blocks = self._extract_text_blocks_with_coords(result)
 
-            # Asignar bloques a renglones por coordenada Y (método heredado)
-            rows_blocks = self._assign_blocks_to_rows(
-                all_blocks,
-                processed_image.height,
-                expected_rows
-            )
+                log_processing_step(
+                    self.logger,
+                    "Organizando bloques de texto en renglones",
+                    step_number=2,
+                    bloques_count=len(all_blocks)
+                )
 
-            # Procesar cada renglón
-            all_rows_data = []
+                # Asignar bloques a renglones por coordenada Y (método heredado)
+                rows_blocks = self._assign_blocks_to_rows(
+                    all_blocks,
+                    processed_image.height,
+                    expected_rows
+                )
 
-            for row_idx in range(expected_rows):
-                blocks_in_row = rows_blocks.get(row_idx, [])
+                # Procesar cada renglón
+                all_rows_data = []
 
-                if not blocks_in_row:
-                    # Renglón vacío
-                    row_data = self._create_empty_row(row_idx)
-                else:
-                    # Procesar bloques usando método heredado (50% boundary para Azure)
-                    row_data = self._process_row_blocks(
-                        blocks_in_row,
-                        row_idx,
-                        processed_image.width,
-                        column_boundary_ratio=0.5  # 50% para Azure Vision
-                    )
+                for row_idx in range(expected_rows):
+                    blocks_in_row = rows_blocks.get(row_idx, [])
 
-                all_rows_data.append(row_data)
+                    if not blocks_in_row:
+                        # Renglón vacío
+                        row_data = self._create_empty_row(row_idx)
+                    else:
+                        # Procesar bloques usando método heredado (50% boundary para Azure)
+                        row_data = self._process_row_blocks(
+                            blocks_in_row,
+                            row_idx,
+                            processed_image.width,
+                            column_boundary_ratio=0.5  # 50% para Azure Vision
+                        )
 
-            print(f"✓ Azure Vision: Total renglones procesados: {len(all_rows_data)}")
-            print(f"✓ Azure Vision: Total llamadas API: 1 (óptimo)")
+                    all_rows_data.append(row_data)
 
-            return all_rows_data
+                # Contar renglones con datos
+                con_datos = sum(1 for row in all_rows_data if row.nombre or row.cedula)
 
-        except Exception as e:
-            print(f"ERROR Azure Vision: {e}")
-            import traceback
-            traceback.print_exc()
-            return []
+                # Agregar métricas
+                op.add_metric("renglones_totales", len(all_rows_data))
+                op.add_metric("renglones_con_datos", con_datos)
+                op.add_metric("renglones_vacios", len(all_rows_data) - con_datos)
+                op.add_metric("api_calls", 1)
+
+                log_info_message(
+                    self.logger,
+                    "Extraccion completa de formulario finalizada",
+                    renglones_procesados=len(all_rows_data),
+                    renglones_con_datos=con_datos,
+                    api_calls=1
+                )
+
+                return all_rows_data
+
+            except Exception as e:
+                log_error_message(self.logger, "Error en extraccion de formulario completo", error=e)
+                return []
 
     def _extract_text_blocks_with_coords(
         self,
@@ -390,7 +472,11 @@ class AzureVisionAdapter(BaseOCRAdapter):
             raise ValueError("No hay respuesta disponible. Ejecuta extract_cedulas() primero.")
 
         if not self.last_raw_response.read or not self.last_raw_response.read.blocks:
-            print("ADVERTENCIA: No hay datos de lectura en respuesta de Azure Vision")
+            log_warning_message(
+                self.logger,
+                "No hay datos de lectura en respuesta de Azure Vision",
+                fallback="confianza_uniforme"
+            )
             # Fallback: confianza uniforme
             return {
                 'confidences': [0.85] * len(text),
@@ -403,7 +489,12 @@ class AzureVisionAdapter(BaseOCRAdapter):
         try:
             words = AzureWordExtractor.extract_all_words(self.last_raw_response)
         except ValueError as e:
-            print(f"ADVERTENCIA: Error extrayendo palabras: {e}")
+            log_warning_message(
+                self.logger,
+                "Error extrayendo palabras de respuesta",
+                error=str(e),
+                fallback="confianza_uniforme"
+            )
             return {
                 'confidences': [0.85] * len(text),
                 'positions': list(range(len(text))),
@@ -416,7 +507,12 @@ class AzureVisionAdapter(BaseOCRAdapter):
 
         # PASO 3: Agregar advertencia si no se encontro
         if not result['found']:
-            print(f"ADVERTENCIA: Texto '{text}' no encontrado en respuesta de Azure Vision")
+            log_warning_message(
+                self.logger,
+                "Texto no encontrado en respuesta de Azure Vision",
+                text=text,
+                fallback="confianza_uniforme"
+            )
 
         # PASO 4: Agregar source y retornar
         result['source'] = 'azure_vision'
