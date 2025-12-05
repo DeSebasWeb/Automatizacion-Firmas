@@ -1,26 +1,21 @@
 """Servicio de validación fuzzy para comparar nombres manuscritos vs digitales."""
-from typing import List, Tuple
+from typing import List, Dict
 import re
 from unidecode import unidecode
+import difflib
 
-# Importar Levenshtein con fallback
+# Importar Levenshtein con fallback a difflib (stdlib)
 try:
     from Levenshtein import ratio
     LEVENSHTEIN_AVAILABLE = True
 except ImportError:
-    # Fallback a implementación básica si Levenshtein no está disponible
+    # Fallback a difflib.SequenceMatcher (viene con Python, más preciso que el anterior)
     LEVENSHTEIN_AVAILABLE = False
     def ratio(s1: str, s2: str) -> float:
-        """Implementación básica de similitud de strings."""
-        if s1 == s2:
-            return 1.0
+        """Fallback usando difflib.SequenceMatcher (equivalente a Levenshtein)."""
         if not s1 or not s2:
             return 0.0
-        # Similitud simple basada en caracteres compartidos
-        s1_lower = s1.lower()
-        s2_lower = s2.lower()
-        shared = sum(1 for c in s1_lower if c in s2_lower)
-        return shared / max(len(s1), len(s2))
+        return difflib.SequenceMatcher(None, s1, s2).ratio()
 
 from ...domain.entities import (
     RowData,
@@ -30,9 +25,10 @@ from ...domain.entities import (
     ValidationAction,
     FieldMatch
 )
+from ...domain.ports import ValidationPort
 
 
-class FuzzyValidator:
+class FuzzyValidator(ValidationPort):
     """
     Validador fuzzy para comparar datos manuscritos vs digitales.
 
@@ -45,8 +41,36 @@ class FuzzyValidator:
 
         Args:
             min_similarity: Umbral mínimo de similitud (0.0-1.0). Default: 0.85 (85%)
+
+        Raises:
+            ValueError: Si min_similarity está fuera del rango [0.0, 1.0]
         """
+        if not 0.0 <= min_similarity <= 1.0:
+            raise ValueError(f"min_similarity debe estar entre 0.0 y 1.0, recibido: {min_similarity}")
+
         self.min_similarity = min_similarity
+        self._normalized_cache: Dict[str, str] = {}  # Caché de normalización
+
+    def get_min_similarity_threshold(self) -> float:
+        """Obtiene el umbral mínimo de similitud configurado."""
+        return self.min_similarity
+
+    def set_min_similarity_threshold(self, threshold: float) -> None:
+        """
+        Configura el umbral mínimo de similitud.
+
+        Args:
+            threshold: Nuevo umbral (0.0 - 1.0)
+
+        Raises:
+            ValueError: Si threshold está fuera del rango [0.0, 1.0]
+        """
+        if not 0.0 <= threshold <= 1.0:
+            raise ValueError(f"threshold debe estar entre 0.0 y 1.0, recibido: {threshold}")
+
+        self.min_similarity = threshold
+        # Limpiar caché cuando cambia el threshold
+        self._normalized_cache.clear()
 
     def validate_person(
         self,
@@ -101,7 +125,7 @@ class FuzzyValidator:
 
         # Comparar contra primer nombre digital
         if digital_data.primer_nombre:
-            match = self._compare_any_nombre(
+            match = self._compare_field(
                 nombres_manuscritos,
                 digital_data.primer_nombre,
                 "primer_nombre"
@@ -111,7 +135,7 @@ class FuzzyValidator:
 
         # Comparar contra segundo nombre digital (si existe)
         if digital_data.segundo_nombre:
-            match = self._compare_any_nombre(
+            match = self._compare_field(
                 nombres_manuscritos,
                 digital_data.segundo_nombre,
                 "segundo_nombre"
@@ -208,19 +232,6 @@ class FuzzyValidator:
             field_name=field_name
         )
 
-    def _compare_any_nombre(
-        self,
-        manuscrito_nombres: List[str],
-        digital_nombre: str,
-        field_name: str
-    ) -> FieldMatch:
-        """
-        Compara un nombre digital contra cualquier nombre manuscrito.
-
-        Similar a _compare_field pero específico para nombres.
-        """
-        return self._compare_field(manuscrito_nombres, digital_nombre, field_name)
-
     def fuzzy_compare(self, text1: str, text2: str) -> float:
         """
         Compara dos textos usando algoritmo fuzzy.
@@ -243,7 +254,7 @@ class FuzzyValidator:
 
     def normalize_text(self, text: str) -> str:
         """
-        Normaliza texto para comparación.
+        Normaliza texto para comparación con caché.
 
         Elimina:
         - Tildes/acentos
@@ -256,23 +267,33 @@ class FuzzyValidator:
 
         Returns:
             Texto normalizado
+
+        Note:
+            Usa caché interno para mejorar performance en textos repetidos.
         """
         if not text:
             return ""
 
+        # Verificar caché
+        if text in self._normalized_cache:
+            return self._normalized_cache[text]
+
         # Eliminar tildes usando unidecode
-        text = unidecode(text)
+        normalized = unidecode(text)
 
         # Convertir a mayúsculas
-        text = text.upper()
+        normalized = normalized.upper()
 
         # Eliminar caracteres especiales (solo letras, números, espacios)
-        text = re.sub(r'[^A-Z0-9\s]', '', text)
+        normalized = re.sub(r'[^A-Z0-9\s]', '', normalized)
 
         # Eliminar espacios extra
-        text = ' '.join(text.split())
+        normalized = ' '.join(normalized.split()).strip()
 
-        return text.strip()
+        # Guardar en caché
+        self._normalized_cache[text] = normalized
+
+        return normalized
 
     def extract_nombres_from_full_name(self, full_name: str) -> List[str]:
         """
