@@ -7,6 +7,12 @@ import difflib
 
 from ...domain.entities import CedulaRecord, RowData
 from ...domain.ports import OCRPort, ConfigPort
+from .ensemble import (
+    DigitConfidenceExtractor,
+    LengthValidator,
+    DigitComparator,
+    EnsembleStatistics
+)
 
 
 @dataclass
@@ -384,24 +390,22 @@ class DigitLevelEnsembleOCR(OCRPort):
         secondary: CedulaRecord
     ) -> Optional[CedulaRecord]:
         """
-        Combina dos cédulas comparando dígito por dígito con lógica mejorada.
+        Combina dos cédulas comparando dígito por dígito usando componentes modulares.
 
-        Lógica MEJORADA según prompt.txt:
+        REFACTORIZADO - Ahora usa componentes especializados:
+        1. LengthValidator - Maneja diferencias de longitud
+        2. DigitConfidenceExtractor - Extrae confianzas por dígito
+        3. DigitComparator - Compara dígitos individuales
+        4. EnsembleStatistics - Calcula estadísticas y valida
+
+        Lógica:
         1. Si ambos coinciden (mismo dígito):
            - Usar el dígito con confianza promedio boosteada
-           - Ejemplo: Google "5" (95%) + Azure "5" (93%) = "5" (97% boosted)
-
         2. Si difieren (diferentes dígitos):
            - Usar el dígito con MAYOR confianza individual
-           - SOLO si la diferencia de confianza es > 10%
-           - Si la diferencia es < 10%, RECHAZAR (ambiguo)
-
-        3. Threshold mínimo absoluto:
-           - Cualquier dígito con confianza < 75% se RECHAZA
-           - Esto evita elegir dígitos dudosos
-
-        4. Ratio máximo de conflictos:
-           - Si hay más del 30% de conflictos, advertir (imagen de baja calidad)
+           - SOLO si la diferencia de confianza es > threshold
+        3. Threshold mínimo absoluto con excepciones para pares de confusión
+        4. Validación de ratio de conflictos
 
         Args:
             primary: Registro del OCR primario
@@ -410,280 +414,88 @@ class DigitLevelEnsembleOCR(OCRPort):
         Returns:
             CedulaRecord combinado o None si no pasa validaciones
         """
-        primary_text = primary.cedula.value
-        secondary_text = secondary.cedula.value
+        # PASO 1: Validar longitudes usando LengthValidator
+        length_result = LengthValidator.validate_and_choose(
+            primary, secondary, self.verbose_logging
+        )
+        if length_result:
+            return length_result
 
-        # MANEJO DE LONGITUDES DIFERENTES
-        # Si las longitudes difieren, elegir la de mayor confianza GENERAL
-        # (no intentar comparar dígito por dígito porque se descuadran)
-        if len(primary_text) != len(secondary_text):
-            if self.verbose_logging:
-                print(f"\n{'='*80}")
-                print("⚠️ LONGITUDES DIFERENTES - Eligiendo por longitud estándar")
-                print(f"{'='*80}")
-                print(f"Primary:   {primary_text} ({len(primary_text)} dígitos, conf: {primary.confidence.as_percentage():.1f}%)")
-                print(f"Secondary: {secondary_text} ({len(secondary_text)} dígitos, conf: {secondary.confidence.as_percentage():.1f}%)")
-                print(f"{'='*80}\n")
-
-            # PRIORIDAD: Elegir por longitud más común de cédulas
-            # Orden de preferencia: 10 dígitos > 8 dígitos > 9 dígitos > otros
-            primary_len = len(primary_text)
-            secondary_len = len(secondary_text)
-
-            # Función para calcular score de preferencia por longitud
-            def length_priority(length):
-                if length == 10:
-                    return 3  # Máxima prioridad (cédulas colombianas)
-                elif length == 8:
-                    return 2  # Segunda prioridad (cédulas antiguas)
-                elif length == 9:
-                    return 1  # Tercera prioridad (menos común)
-                else:
-                    return 0  # Otros (muy raro)
-
-            primary_priority = length_priority(primary_len)
-            secondary_priority = length_priority(secondary_len)
-
-            # Comparar por prioridad de longitud
-            if primary_priority > secondary_priority:
-                if self.verbose_logging:
-                    print(f"✅ ELEGIDO Primary: {primary_text}")
-                    print(f"   Razón: {primary_len} dígitos es más común que {secondary_len} dígitos")
-                    print(f"   Confianza: {primary.confidence.as_percentage():.1f}%\n")
-                return primary
-            elif secondary_priority > primary_priority:
-                if self.verbose_logging:
-                    print(f"✅ ELEGIDO Secondary: {secondary_text}")
-                    print(f"   Razón: {secondary_len} dígitos es más común que {primary_len} dígitos")
-                    print(f"   Confianza: {secondary.confidence.as_percentage():.1f}%\n")
-                return secondary
-            else:
-                # Misma prioridad de longitud → elegir por confianza
-                if primary.confidence.value >= secondary.confidence.value:
-                    if self.verbose_logging:
-                        print(f"✅ ELEGIDO Primary: {primary_text}")
-                        print(f"   Razón: Misma prioridad de longitud ({primary_len} dígitos), mayor confianza")
-                        print(f"   Confianza: {primary.confidence.as_percentage():.1f}% vs {secondary.confidence.as_percentage():.1f}%\n")
-                    return primary
-                else:
-                    if self.verbose_logging:
-                        print(f"✅ ELEGIDO Secondary: {secondary_text}")
-                        print(f"   Razón: Misma prioridad de longitud ({secondary_len} dígitos), mayor confianza")
-                        print(f"   Confianza: {secondary.confidence.as_percentage():.1f}% vs {primary.confidence.as_percentage():.1f}%\n")
-                    return secondary
-
-        max_len = len(primary_text)  # Ahora sabemos que son iguales
-        min_len = max_len
-
-        # Extraer confianzas por dígito
+        # PASO 2: Extraer confianzas por dígito usando DigitConfidenceExtractor
         try:
-            primary_conf_data = self.primary_ocr.get_character_confidences(primary_text)
-            secondary_conf_data = self.secondary_ocr.get_character_confidences(secondary_text)
-        except Exception as e:
+            primary_data, secondary_data = DigitConfidenceExtractor.extract_from_both_ocr(
+                primary, secondary,
+                self.primary_ocr, self.secondary_ocr
+            )
+        except ValueError as e:
             print(f"ERROR extrayendo confianzas por dígito: {e}")
             # Fallback: usar el de mayor confianza total
             return primary if primary.confidence.as_percentage() >= secondary.confidence.as_percentage() else secondary
-
-        primary_confidences = primary_conf_data['confidences']
-        secondary_confidences = secondary_conf_data['confidences']
 
         # Logging inicial
         if self.verbose_logging:
             print(f"\n{'='*80}")
             print("COMPARACIÓN DÍGITO POR DÍGITO")
             print(f"{'='*80}")
-            print(f"Primary:   {primary_text}")
-            print(f"Secondary: {secondary_text}")
+            print(f"Primary:   {primary_data.text}")
+            print(f"Secondary: {secondary_data.text}")
             print(f"{'='*80}\n")
 
-        # Combinar dígito por dígito
-        combined_digits = []
-        combined_confidences = []
-        consensus_types = []  # 'unanimous', 'highest_confidence', 'rejected'
-        agreement_count = 0
-        conflict_count = 0
+        # PASO 3: Comparar dígito por dígito usando DigitComparator
+        comparator = DigitComparator(
+            min_digit_confidence=self.min_digit_confidence,
+            confidence_boost=self.confidence_boost,
+            allow_low_confidence_override=self.allow_low_confidence_override,
+            conflict_resolver=None  # Usa el default con nuestros parámetros
+        )
 
-        # Tabla para logging
-        comparison_table = []
+        # Necesitamos actualizar el conflict_resolver con nuestros parámetros
+        from .ensemble import ConflictResolver
+        comparator.conflict_resolver = ConflictResolver(
+            ambiguity_threshold=self.ambiguity_threshold,
+            allow_adjustments=self.allow_low_confidence_override
+        )
+
+        comparisons = []
+        max_len = len(primary_data.text)
 
         for i in range(max_len):
-            # Obtener dígitos y confianzas (si existen)
-            p_digit = primary_text[i] if i < len(primary_text) else None
-            s_digit = secondary_text[i] if i < len(secondary_text) else None
+            # Obtener dígitos y confianzas
+            p_digit, p_conf = DigitConfidenceExtractor.get_digit_at_position(primary_data, i)
+            s_digit, s_conf = DigitConfidenceExtractor.get_digit_at_position(secondary_data, i)
 
-            p_conf = primary_confidences[i] if i < len(primary_confidences) else 0.0
-            s_conf = secondary_confidences[i] if i < len(secondary_confidences) else 0.0
+            # Comparar en esta posición
+            comparison = comparator.compare_at_position(
+                position=i,
+                primary_digit=p_digit,
+                primary_confidence=p_conf,
+                secondary_digit=s_digit,
+                secondary_confidence=s_conf,
+                verbose=self.verbose_logging
+            )
 
-            # CASO 1: Verificar threshold mínimo absoluto (con excepciones)
-            # Permitir confianzas más bajas si:
-            # - El otro OCR también está en rango bajo (ambos inciertos)
-            # - Es un par de confusión conocido y el otro tiene alta confianza
-
-            min_threshold = self.min_digit_confidence
-            relaxed_threshold = min_threshold - 0.10  # 10% más permisivo
-
-            # Si ambos dígitos existen, verificar contexto
-            if p_digit and s_digit and p_digit != s_digit:
-                is_confusion = (p_digit, s_digit) in self.confusion_pairs
-
-                # Si es par de confusión y uno tiene alta confianza, relajar threshold
-                if is_confusion and self.allow_low_confidence_override:
-                    if p_conf < min_threshold and s_conf >= 0.75:
-                        # Secondary tiene alta confianza, permitir Primary bajo
-                        min_threshold = relaxed_threshold
-                        if self.verbose_logging:
-                            print(f"Pos {i}: ℹ️ Threshold relajado para Primary (par de confusión)")
-                    elif s_conf < min_threshold and p_conf >= 0.75:
-                        # Primary tiene alta confianza, permitir Secondary bajo
-                        if self.verbose_logging:
-                            print(f"Pos {i}: ℹ️ Threshold relajado para Secondary (par de confusión)")
-
-            # Validar con threshold (posiblemente relajado)
-            if p_digit and p_conf < min_threshold:
-                if self.verbose_logging:
-                    print(f"Pos {i}: Primary '{p_digit}' tiene confianza muy baja ({p_conf:.2%} < {min_threshold:.2%})")
+            if comparison is None:
+                # Comparación rechazada (confianza muy baja o conflicto ambiguo)
                 return None
 
-            if s_digit and s_conf < min_threshold:
-                if self.verbose_logging:
-                    print(f"Pos {i}: Secondary '{s_digit}' tiene confianza muy baja ({s_conf:.2%} < {min_threshold:.2%})")
-                return None
+            comparisons.append(comparison)
 
-            # CASO 2: Si solo uno tiene dígito
-            if p_digit is None:
-                chosen_digit = s_digit
-                chosen_conf = s_conf
-                source = 'Secondary'
-                consensus_type = 'only_secondary'
-            elif s_digit is None:
-                chosen_digit = p_digit
-                chosen_conf = p_conf
-                source = 'Primary'
-                consensus_type = 'only_primary'
-            # CASO 3: Ambos coinciden (UNANIMIDAD)
-            elif p_digit == s_digit:
-                agreement_count += 1
-                chosen_digit = p_digit
-                avg_conf = (p_conf + s_conf) / 2
-                # Boost por coincidencia
-                chosen_conf = min(0.99, avg_conf + self.confidence_boost)
-                source = 'Ambos'
-                consensus_type = 'unanimous'
+        # PASO 4: Calcular estadísticas usando EnsembleStatistics
+        stats_calculator = EnsembleStatistics(
+            max_conflict_ratio=self.max_conflict_ratio
+        )
+        stats = stats_calculator.calculate_statistics(comparisons)
 
-                if self.verbose_logging:
-                    print(f"Pos {i}: COINCIDENCIA '{p_digit}' "
-                          f"Primary={p_conf:.2%} Secondary={s_conf:.2%} → Final={chosen_conf:.2%}")
-
-            # CASO 4: Difieren (CONFLICTO)
-            else:
-                conflict_count += 1
-                conf_diff = abs(p_conf - s_conf)
-
-                # Verificar si es un par de confusión conocido
-                is_confusion_pair = (p_digit, s_digit) in self.confusion_pairs
-                confusion_prob = self.confusion_pairs.get((p_digit, s_digit), 0.0)
-
-                # Umbral adaptativo basado en pares de confusión
-                effective_threshold = self.ambiguity_threshold
-                if is_confusion_pair:
-                    # Para pares confusos (1 vs 7), reducir el umbral de ambigüedad
-                    # Esto permite decidir incluso con diferencias pequeñas
-                    effective_threshold = max(0.05, self.ambiguity_threshold - confusion_prob)
-                    if self.verbose_logging:
-                        print(f"Pos {i}: ⚠️ PAR DE CONFUSIÓN DETECTADO: '{p_digit}' vs '{s_digit}' "
-                              f"(prob confusión: {confusion_prob:.1%})")
-                        print(f"         Umbral ajustado: {self.ambiguity_threshold:.1%} → {effective_threshold:.1%}")
-
-                # Si la diferencia de confianza es muy pequeña, es ambiguo
-                if conf_diff < effective_threshold:
-                    if self.verbose_logging:
-                        print(f"Pos {i}: CONFLICTO AMBIGUO "
-                              f"Primary='{p_digit}' ({p_conf:.2%}) "
-                              f"Secondary='{s_digit}' ({s_conf:.2%}) "
-                              f"Diferencia={conf_diff:.2%} < {effective_threshold:.2%} → RECHAZADO")
-                    return None
-
-                # ESTRATEGIA MEJORADA: Elegir con ajuste de confianza
-                # Para pares de confusión, dar más peso al que tiene mayor confianza
-                adjusted_p_conf = p_conf
-                adjusted_s_conf = s_conf
-
-                if is_confusion_pair:
-                    # Penalizar ligeramente la confianza del OCR que reporta el dígito más común
-                    # en errores (ej: si reporta '7' cuando podría ser '1')
-                    # Esto favorece al OCR más conservador
-                    if p_digit in ['1', '7'] and s_digit in ['1', '7']:
-                        # Caso especial 1 vs 7: si uno tiene confianza baja, probablemente es 1
-                        if p_conf < 0.70 and s_conf > 0.80:
-                            adjusted_p_conf *= 0.95  # Penalizar Primary
-                        elif s_conf < 0.70 and p_conf > 0.80:
-                            adjusted_s_conf *= 0.95  # Penalizar Secondary
-
-                # Elegir el de mayor confianza (ajustada)
-                if adjusted_p_conf > adjusted_s_conf:
-                    chosen_digit = p_digit
-                    chosen_conf = p_conf  # Usar confianza original
-                    source = 'Primary'
-                    if adjusted_p_conf != p_conf:
-                        source += ' (ajustado)'
-                else:
-                    chosen_digit = s_digit
-                    chosen_conf = s_conf  # Usar confianza original
-                    source = 'Secondary'
-                    if adjusted_s_conf != s_conf:
-                        source += ' (ajustado)'
-
-                consensus_type = 'highest_confidence'
-
-                if self.verbose_logging:
-                    conflict_symbol = "⚠️" if is_confusion_pair else "→"
-                    print(f"Pos {i}: {conflict_symbol} CONFLICTO RESUELTO "
-                          f"Primary='{p_digit}' ({p_conf:.2%}) "
-                          f"Secondary='{s_digit}' ({s_conf:.2%}) "
-                          f"→ Elegido '{chosen_digit}' de {source}")
-
-            combined_digits.append(chosen_digit)
-            combined_confidences.append(chosen_conf)
-            consensus_types.append(consensus_type)
-
-            # Agregar a tabla de comparación
-            comparison_table.append({
-                'pos': i,
-                'primary_digit': p_digit or '-',
-                'primary_conf': p_conf * 100 if p_digit else 0,
-                'secondary_digit': s_digit or '-',
-                'secondary_conf': s_conf * 100 if s_digit else 0,
-                'chosen': chosen_digit,
-                'chosen_conf': chosen_conf * 100,
-                'source': source,
-                'type': consensus_type
-            })
-
-        # Crear cédula combinada
-        combined_cedula = ''.join(combined_digits)
-        avg_confidence = sum(combined_confidences) / len(combined_confidences) * 100
-
-        # Estadísticas finales
-        unanimous = consensus_types.count('unanimous')
-        conflicts = conflict_count
-        total_digits = max_len
-
-        # Logging detallado
+        # Imprimir estadísticas
         if self.verbose_logging:
-            self._print_comparison_table(comparison_table)
-            print(f"\n{'='*80}")
-            print("ESTADÍSTICAS:")
-            print(f"  Coincidencias: {unanimous}/{total_digits} ({unanimous/total_digits*100:.1f}%)")
-            print(f"  Conflictos:    {conflicts}/{total_digits} ({conflicts/total_digits*100:.1f}%)")
-            print(f"  Confianza promedio: {avg_confidence:.1f}%")
+            stats_calculator.print_statistics(stats, verbose=True)
 
-        # VALIDACIÓN: Si hay muchos conflictos, es sospechoso
-        conflict_ratio = conflicts / total_digits if total_digits > 0 else 0.0
-        if conflict_ratio > self.max_conflict_ratio:
-            if self.verbose_logging:
-                print(f"\n⚠ ADVERTENCIA: {conflicts} conflictos ({conflict_ratio*100:.1f}%) "
-                      f"es mucho (>{self.max_conflict_ratio*100:.0f}%). La cédula puede ser de baja calidad.")
-            # No rechazar automáticamente, solo advertir
+        # Validar estadísticas (warnings, no rechaza)
+        stats_calculator.validate_statistics(stats, self.verbose_logging)
+
+        # PASO 5: Crear cédula combinada
+        combined_cedula = ''.join([c.chosen_digit for c in comparisons])
+        avg_confidence = stats.average_confidence * 100
 
         # Retornar registro combinado
         return CedulaRecord.from_primitives(
