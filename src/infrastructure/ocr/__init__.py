@@ -1,6 +1,10 @@
 from .tesseract_ocr import TesseractOCR
 from .manual_ocr import ManualOCR
 
+# Base classes and utilities
+from .base_ocr_adapter import BaseOCRAdapter
+from .image_converter import ImageConverter
+
 # OCR Factory (siempre disponible)
 from .ocr_factory import create_ocr_adapter, get_available_providers, print_provider_comparison
 
@@ -43,6 +47,8 @@ except Exception:
 __all__ = [
     'TesseractOCR',
     'ManualOCR',
+    'BaseOCRAdapter',
+    'ImageConverter',
     'create_ocr_adapter',
     'get_available_providers',
     'print_provider_comparison',
