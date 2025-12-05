@@ -14,6 +14,7 @@ from ...domain.entities import CedulaRecord, RowData
 from ...domain.ports import ConfigPort
 from .base_ocr_adapter import BaseOCRAdapter
 from .image_converter import ImageConverter
+from .vision import GoogleSymbolExtractor, ConfidenceMapper
 
 
 class GoogleVisionAdapter(BaseOCRAdapter):
@@ -377,18 +378,17 @@ class GoogleVisionAdapter(BaseOCRAdapter):
 
     def get_character_confidences(self, text: str) -> Dict[str, any]:
         """
-        Extrae la confianza individual de cada carácter en el texto detectado.
+        Extrae la confianza individual de cada caracter en el texto detectado.
 
-        Google Vision API retorna confianza a nivel de símbolo/carácter en:
-        - full_text_annotation.pages[].blocks[].paragraphs[].words[].symbols[]
+        REFACTORIZADO - Ahora usa GoogleSymbolExtractor y ConfidenceMapper.
 
         Args:
-            text: El texto (cédula) para el cual queremos las confianzas
+            text: El texto (cedula) para el cual queremos las confianzas
 
         Returns:
             Dict con:
-            - 'confidences': List[float] con confianza de cada carácter (0.0-1.0)
-            - 'positions': List[int] con posición de cada carácter
+            - 'confidences': List[float] con confianza de cada caracter (0.0-1.0)
+            - 'positions': List[int] con posicion de cada caracter
             - 'average': float con confianza promedio
             - 'source': str identificando el origen
 
@@ -408,64 +408,25 @@ class GoogleVisionAdapter(BaseOCRAdapter):
                 'source': 'google_vision'
             }
 
-        # Limpiar el texto buscado (eliminar espacios, puntos, etc)
-        text_clean = text.replace(' ', '').replace('.', '').replace(',', '').replace('-', '')
+        # PASO 1: Extraer simbolos usando GoogleSymbolExtractor
+        try:
+            symbols = GoogleSymbolExtractor.extract_all_symbols(self.last_raw_response)
+        except ValueError as e:
+            print(f"ADVERTENCIA: Error extrayendo simbolos: {e}")
+            return {
+                'confidences': [0.85] * len(text),
+                'positions': list(range(len(text))),
+                'average': 0.85,
+                'source': 'google_vision'
+            }
 
-        # Extraer todos los símbolos con sus confianzas
-        all_symbols = []
+        # PASO 2: Mapear texto a confianzas usando ConfidenceMapper
+        result = ConfidenceMapper.map_from_symbols(text, symbols)
 
-        # Iterar sobre la estructura jerárquica de Google Vision
-        for page in self.last_raw_response.full_text_annotation.pages:
-            for block in page.blocks:
-                for paragraph in block.paragraphs:
-                    for word in paragraph.words:
-                        # Obtener confianza de la palabra (si existe)
-                        word_confidence = word.confidence if hasattr(word, 'confidence') else 0.95
+        # PASO 3: Agregar advertencia si no se encontro
+        if not result['found']:
+            print(f"ADVERTENCIA: Texto '{text}' no encontrado en respuesta")
 
-                        # Agregar cada símbolo con la confianza de su palabra
-                        for symbol in word.symbols:
-                            symbol_conf = symbol.confidence if hasattr(symbol, 'confidence') else word_confidence
-                            all_symbols.append({
-                                'text': symbol.text,
-                                'confidence': symbol_conf
-                            })
-
-        # Buscar el texto en los símbolos detectados
-        all_text = ''.join([s['text'] for s in all_symbols])
-        all_text_clean = ''.join([c for c in all_text if c.isdigit()])
-
-        # Intentar encontrar el texto buscado
-        confidences = []
-        positions = []
-
-        if text_clean in all_text_clean:
-            # Encontrado - extraer confianzas correspondientes
-            start_idx = all_text_clean.index(text_clean)
-
-            # Mapear índices
-            digit_counter = 0
-
-            for symbol in all_symbols:
-                if symbol['text'].isdigit():
-                    if digit_counter >= start_idx and digit_counter < start_idx + len(text_clean):
-                        confidences.append(symbol['confidence'])
-                        positions.append(digit_counter - start_idx)
-                    digit_counter += 1
-        else:
-            # No encontrado - usar confianza uniforme
-            print(f"ADVERTENCIA: Texto '{text_clean}' no encontrado en respuesta")
-            numeric_symbols = [s for s in all_symbols if s['text'].isdigit()]
-            avg_conf = sum(s['confidence'] for s in numeric_symbols) / len(numeric_symbols) if numeric_symbols else 0.90
-
-            confidences = [avg_conf] * len(text_clean)
-            positions = list(range(len(text_clean)))
-
-        # Calcular promedio
-        average = sum(confidences) / len(confidences) if confidences else 0.0
-
-        return {
-            'confidences': confidences,
-            'positions': positions,
-            'average': average,
-            'source': 'google_vision'
-        }
+        # PASO 4: Agregar source y retornar
+        result['source'] = 'google_vision'
+        return result
