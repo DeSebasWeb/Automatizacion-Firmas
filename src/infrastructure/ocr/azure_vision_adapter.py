@@ -16,6 +16,7 @@ from ...domain.entities import CedulaRecord, RowData
 from ...domain.ports import ConfigPort
 from .base_ocr_adapter import BaseOCRAdapter
 from .image_converter import ImageConverter
+from .vision import AzureWordExtractor, ConfidenceMapper
 
 
 class AzureVisionAdapter(BaseOCRAdapter):
@@ -368,18 +369,17 @@ class AzureVisionAdapter(BaseOCRAdapter):
 
     def get_character_confidences(self, text: str) -> Dict[str, any]:
         """
-        Extrae la confianza individual de cada carácter en el texto detectado.
+        Extrae la confianza individual de cada caracter en el texto detectado.
 
-        Azure Read API v4.0 retorna confianza a nivel de palabra en:
-        - result.read.blocks[].lines[].words[]
+        REFACTORIZADO - Ahora usa AzureWordExtractor y ConfidenceMapper.
 
         Args:
-            text: El texto (cédula) para el cual queremos las confianzas
+            text: El texto (cedula) para el cual queremos las confianzas
 
         Returns:
             Dict con:
-            - 'confidences': List[float] con confianza de cada carácter (0.0-1.0)
-            - 'positions': List[int] con posición de cada carácter
+            - 'confidences': List[float] con confianza de cada caracter (0.0-1.0)
+            - 'positions': List[int] con posicion de cada caracter
             - 'average': float con confianza promedio
             - 'source': str identificando el origen
 
@@ -399,69 +399,25 @@ class AzureVisionAdapter(BaseOCRAdapter):
                 'source': 'azure_vision'
             }
 
-        # Limpiar el texto buscado (eliminar espacios, puntos, etc)
-        text_clean = text.replace(' ', '').replace('.', '').replace(',', '').replace('-', '')
+        # PASO 1: Extraer palabras usando AzureWordExtractor
+        try:
+            words = AzureWordExtractor.extract_all_words(self.last_raw_response)
+        except ValueError as e:
+            print(f"ADVERTENCIA: Error extrayendo palabras: {e}")
+            return {
+                'confidences': [0.85] * len(text),
+                'positions': list(range(len(text))),
+                'average': 0.85,
+                'source': 'azure_vision'
+            }
 
-        # Extraer todas las palabras con sus confianzas
-        all_words = []
+        # PASO 2: Mapear texto a confianzas usando ConfidenceMapper
+        result = ConfidenceMapper.map_from_words(text, words)
 
-        # Iterar sobre la estructura de Azure Vision Read API
-        for block in self.last_raw_response.read.blocks:
-            for line in block.lines:
-                # Azure Read API da words con confianza
-                if hasattr(line, 'words') and line.words:
-                    for word in line.words:
-                        word_text = word.text
-                        word_confidence = word.confidence if hasattr(word, 'confidence') else 0.95
+        # PASO 3: Agregar advertencia si no se encontro
+        if not result['found']:
+            print(f"ADVERTENCIA: Texto '{text}' no encontrado en respuesta de Azure Vision")
 
-                        all_words.append({
-                            'text': word_text,
-                            'confidence': word_confidence
-                        })
-
-        # Construir string de todas las palabras (solo dígitos)
-        all_text = ''.join([w['text'] for w in all_words])
-        all_text_clean = ''.join([c for c in all_text if c.isdigit()])
-
-        # Intentar encontrar el texto buscado
-        confidences = []
-        positions = []
-
-        if text_clean in all_text_clean:
-            # Encontrado - extraer confianzas correspondientes
-            start_idx = all_text_clean.index(text_clean)
-
-            # Mapear índices a confianzas de palabras
-            digit_counter = 0
-            for word in all_words:
-                word_text = word['text']
-                word_conf = word['confidence']
-
-                # Procesar cada carácter de la palabra
-                for char in word_text:
-                    if char.isdigit():
-                        if digit_counter >= start_idx and digit_counter < start_idx + len(text_clean):
-                            # Este dígito es parte de la cédula buscada
-                            confidences.append(word_conf)
-                            positions.append(digit_counter - start_idx)
-                        digit_counter += 1
-        else:
-            # No encontrado - usar confianza uniforme
-            print(f"ADVERTENCIA: Texto '{text_clean}' no encontrado en respuesta de Azure Vision")
-
-            # Calcular confianza promedio
-            numeric_words = [w for w in all_words if any(c.isdigit() for c in w['text'])]
-            avg_conf = sum(w['confidence'] for w in numeric_words) / len(numeric_words) if numeric_words else 0.90
-
-            confidences = [avg_conf] * len(text_clean)
-            positions = list(range(len(text_clean)))
-
-        # Calcular promedio
-        average = sum(confidences) / len(confidences) if confidences else 0.0
-
-        return {
-            'confidences': confidences,
-            'positions': positions,
-            'average': average,
-            'source': 'azure_vision'
-        }
+        # PASO 4: Agregar source y retornar
+        result['source'] = 'azure_vision'
+        return result
