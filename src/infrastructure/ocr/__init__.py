@@ -6,7 +6,7 @@ from .base_ocr_adapter import BaseOCRAdapter
 from .image_converter import ImageConverter
 
 # OCR Factory (siempre disponible)
-from .ocr_factory import create_ocr_adapter, get_available_providers, print_provider_comparison
+from .ocr_factory import create_ocr_adapter, get_available_providers, get_provider_comparison
 
 try:
     from .google_vision_adapter import GoogleVisionAdapter
@@ -51,7 +51,7 @@ __all__ = [
     'ImageConverter',
     'create_ocr_adapter',
     'get_available_providers',
-    'print_provider_comparison',
+    'get_provider_comparison',
 ]
 
 if GOOGLE_VISION_AVAILABLE:
