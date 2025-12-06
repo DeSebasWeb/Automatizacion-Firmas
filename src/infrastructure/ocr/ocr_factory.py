@@ -2,6 +2,7 @@
 from typing import Optional
 
 from ...domain.ports import OCRPort, ConfigPort
+from ...shared.logging import LoggerFactory, log_info_message, log_warning_message, log_error_message
 
 
 def create_ocr_adapter(config: ConfigPort) -> Optional[OCRPort]:
@@ -30,22 +31,29 @@ def create_ocr_adapter(config: ConfigPort) -> Optional[OCRPort]:
         Si el proveedor configurado no está disponible, intenta fallback
         automático a otros proveedores disponibles.
     """
+    logger = LoggerFactory.get_infrastructure_logger("ocr_factory")
+
     provider = config.get('ocr.provider', 'google_vision').lower()
 
-    print("\n" + "="*60)
-    print("OCR FACTORY - Inicializando proveedor OCR")
-    print("="*60)
-    print(f"Proveedor configurado: {provider}")
-    print("="*60 + "\n")
+    log_info_message(
+        logger,
+        "Inicializando proveedor OCR",
+        provider=provider,
+        component="ocr_factory"
+    )
 
     # Intentar crear el proveedor configurado
-    ocr_adapter = _try_create_provider(provider, config)
+    ocr_adapter = _try_create_provider(provider, config, logger)
 
     if ocr_adapter:
         return ocr_adapter
 
     # Si falló, intentar fallback automático
-    print(f"\n⚠️ No se pudo inicializar '{provider}', intentando fallback...")
+    log_warning_message(
+        logger,
+        "No se pudo inicializar proveedor configurado, intentando fallback",
+        failed_provider=provider
+    )
 
     fallback_order = ['google_vision', 'azure_vision', 'tesseract']
 
@@ -53,31 +61,41 @@ def create_ocr_adapter(config: ConfigPort) -> Optional[OCRPort]:
         if fallback_provider == provider:
             continue  # Ya lo intentamos
 
-        print(f"→ Intentando {fallback_provider}...")
-        ocr_adapter = _try_create_provider(fallback_provider, config)
+        logger.info("Intentando proveedor fallback", provider=fallback_provider)
+        ocr_adapter = _try_create_provider(fallback_provider, config, logger)
 
         if ocr_adapter:
-            print(f"✓ Fallback exitoso a {fallback_provider}")
+            log_info_message(
+                logger,
+                "Fallback exitoso",
+                fallback_provider=fallback_provider,
+                original_provider=provider
+            )
             return ocr_adapter
 
     # Si ninguno funcionó
-    print("\n❌ ERROR: No se pudo inicializar ningún proveedor OCR")
-    print("\n💡 Soluciones:")
-    print("   1. Google Vision: Configurar gcloud auth application-default login")
-    print("   2. Azure Vision: Configurar AZURE_VISION_ENDPOINT y AZURE_VISION_KEY")
-    print("   3. Tesseract: Instalar con pip install pytesseract")
-    print()
+    log_error_message(
+        logger,
+        "No se pudo inicializar ningun proveedor OCR",
+        attempted_providers=[provider] + fallback_order,
+        solutions=[
+            "Google Vision: Configurar gcloud auth application-default login",
+            "Azure Vision: Configurar AZURE_VISION_ENDPOINT y AZURE_VISION_KEY",
+            "Tesseract: Instalar con pip install pytesseract"
+        ]
+    )
 
     return None
 
 
-def _try_create_provider(provider: str, config: ConfigPort) -> Optional[OCRPort]:
+def _try_create_provider(provider: str, config: ConfigPort, logger) -> Optional[OCRPort]:
     """
     Intenta crear un proveedor OCR específico.
 
     Args:
         provider: Nombre del proveedor ("google_vision", "azure_vision", etc.)
         config: Servicio de configuración
+        logger: Logger para registrar eventos
 
     Returns:
         Adaptador OCR o None si falló
@@ -85,26 +103,39 @@ def _try_create_provider(provider: str, config: ConfigPort) -> Optional[OCRPort]
     try:
         if provider == 'google_vision':
             from .google_vision_adapter import GoogleVisionAdapter
-            print("→ Inicializando Google Cloud Vision...")
+            logger.info("Inicializando Google Cloud Vision")
             adapter = GoogleVisionAdapter(config)
-            print("✓ Google Cloud Vision listo")
-            print("💰 1,000 imágenes gratis/mes = 15,000 cédulas gratis/mes")
+            log_info_message(
+                logger,
+                "Google Cloud Vision inicializado correctamente",
+                free_tier="1,000 imagenes/mes",
+                equivalent_cedulas="15,000 cedulas/mes"
+            )
             return adapter
 
         elif provider == 'azure_vision':
             from .azure_vision_adapter import AzureVisionAdapter
-            print("→ Inicializando Azure Computer Vision...")
+            logger.info("Inicializando Azure Computer Vision")
             adapter = AzureVisionAdapter(config)
-            print("✓ Azure Computer Vision listo")
-            print("💰 5,000 transacciones gratis/mes = 75,000 cédulas gratis/mes")
+            log_info_message(
+                logger,
+                "Azure Computer Vision inicializado correctamente",
+                free_tier="5,000 transacciones/mes",
+                equivalent_cedulas="75,000 cedulas/mes"
+            )
             return adapter
 
         elif provider == 'ensemble':
             from .ensemble_ocr import EnsembleOCR
-            print("→ Inicializando Ensemble OCR (Google + Azure)...")
+            logger.info("Inicializando Ensemble OCR", providers=["google_vision", "azure_vision"])
             adapter = EnsembleOCR(config)
-            print("✓ Ensemble OCR listo (modo máxima precisión)")
-            print("⚠️ Doble costo: usa ambas APIs simultáneamente")
+            log_info_message(
+                logger,
+                "Ensemble OCR inicializado correctamente",
+                mode="maxima_precision",
+                cost_multiplier=2,
+                warning="Doble costo - usa ambas APIs"
+            )
             return adapter
 
         elif provider == 'digit_ensemble':
@@ -112,39 +143,59 @@ def _try_create_provider(provider: str, config: ConfigPort) -> Optional[OCRPort]
             from .azure_vision_adapter import AzureVisionAdapter
             from .digit_level_ensemble_ocr import DigitLevelEnsembleOCR
 
-            print("→ Inicializando Digit-Level Ensemble OCR...")
-            print("   Creando Azure Vision adapter (Primary)...")
+            logger.info("Inicializando Digit-Level Ensemble OCR")
+            logger.debug("Creando Azure Vision adapter (Primary)")
             azure = AzureVisionAdapter(config)
-            print("   Creando Google Vision adapter (Secondary)...")
+            logger.debug("Creando Google Vision adapter (Secondary)")
             google = GoogleVisionAdapter(config)
-            print("   Combinando ambos con lógica de votación por dígito...")
+            logger.debug("Combinando ambos con logica de votacion por digito")
 
             adapter = DigitLevelEnsembleOCR(
                 config=config,
                 primary_ocr=azure,      # Azure como primary (mejor precisión)
                 secondary_ocr=google    # Google como secondary
             )
-            print("✓ Digit-Level Ensemble listo (ULTRA precisión 98-99.5%)")
-            print("⚠️ Doble costo: usa ambas APIs simultáneamente")
-            print("🎯 Combina lo mejor de cada OCR en cada posición de dígito")
+            log_info_message(
+                logger,
+                "Digit-Level Ensemble inicializado correctamente",
+                precision="98-99.5%",
+                cost_multiplier=2,
+                strategy="votacion_por_digito",
+                warning="Doble costo - usa ambas APIs"
+            )
             return adapter
 
         elif provider == 'tesseract':
             from .tesseract_ocr import TesseractOCR
-            print("→ Inicializando Tesseract OCR...")
+            logger.info("Inicializando Tesseract OCR")
             adapter = TesseractOCR(config)
-            print("✓ Tesseract OCR listo (gratuito, menor precisión)")
+            log_info_message(
+                logger,
+                "Tesseract OCR inicializado correctamente",
+                cost="gratis",
+                precision="70-85%"
+            )
             return adapter
 
         else:
-            print(f"❌ Proveedor desconocido: {provider}")
+            log_error_message(logger, "Proveedor OCR desconocido", provider=provider)
             return None
 
     except ImportError as e:
-        print(f"✗ {provider} no está instalado: {e}")
+        log_error_message(
+            logger,
+            "Proveedor OCR no esta instalado",
+            provider=provider,
+            error=e
+        )
         return None
     except Exception as e:
-        print(f"✗ Error inicializando {provider}: {e}")
+        log_error_message(
+            logger,
+            "Error inicializando proveedor OCR",
+            provider=provider,
+            error=e
+        )
         return None
 
 
@@ -190,35 +241,53 @@ def get_available_providers() -> list:
     return available
 
 
-def print_provider_comparison():
+def get_provider_comparison() -> dict:
     """
-    Imprime tabla comparativa de proveedores OCR disponibles.
+    Obtiene datos comparativos de proveedores OCR disponibles.
 
-    Útil para ayudar al usuario a elegir el mejor proveedor.
+    Returns:
+        Dict con información de cada proveedor y recomendaciones
     """
-    print("\n" + "="*80)
-    print("COMPARACIÓN DE PROVEEDORES OCR")
-    print("="*80)
-    print()
-    print(f"{'Proveedor':<22} {'Precisión':<15} {'Costo/1000 imgs':<20} {'Velocidad':<15}")
-    print("-" * 80)
-    print(f"{'Google Vision':<22} {'95-98%':<15} {'$5.16 COP':<20} {'1-2 seg':<15}")
-    print(f"{'Azure Vision':<22} {'96-98%':<15} {'$4,200 COP':<20} {'1-2 seg':<15}")
-    print(f"{'Ensemble':<22} {'>99%':<15} {'$9,360 COP':<20} {'2-3 seg':<15}")
-    print(f"{'Digit Ensemble ⭐':<22} {'98-99.5%':<15} {'$9,360 COP':<20} {'2-3 seg':<15}")
-    print(f"{'Tesseract':<22} {'70-85%':<15} {'Gratis':<20} {'0.5-1 seg':<15}")
-    print("-" * 80)
-    print()
-    print("💡 Recomendaciones:")
-    print("   • MÁXIMA PRECISIÓN: Digit Ensemble ⭐ (votación dígito por dígito, 98-99.5%)")
-    print("   • Producción: Google Vision (mejor relación precisión/costo)")
-    print("   • Comparación: Azure Vision (validar cuál da mejor precisión)")
-    print("   • Alta precisión: Ensemble (combina cédulas completas, >99%)")
-    print("   • Desarrollo: Tesseract (gratis, pero menor precisión)")
-    print()
-    print("Proveedores disponibles en este sistema:")
-    available = get_available_providers()
-    for provider in available:
-        print(f"   ✓ {provider}")
-    print()
-    print("="*80 + "\n")
+    return {
+        'providers': {
+            'google_vision': {
+                'precision': '95-98%',
+                'cost_per_1000': '$5.16 COP',
+                'speed': '1-2 seg',
+                'free_tier': '1,000 imgs/mes'
+            },
+            'azure_vision': {
+                'precision': '96-98%',
+                'cost_per_1000': '$4,200 COP',
+                'speed': '1-2 seg',
+                'free_tier': '5,000 trans/mes'
+            },
+            'ensemble': {
+                'precision': '>99%',
+                'cost_per_1000': '$9,360 COP',
+                'speed': '2-3 seg',
+                'note': 'Doble costo'
+            },
+            'digit_ensemble': {
+                'precision': '98-99.5%',
+                'cost_per_1000': '$9,360 COP',
+                'speed': '2-3 seg',
+                'recommended': True,
+                'note': 'Votacion digito por digito'
+            },
+            'tesseract': {
+                'precision': '70-85%',
+                'cost_per_1000': 'Gratis',
+                'speed': '0.5-1 seg',
+                'note': 'Local, sin conexion'
+            }
+        },
+        'recommendations': {
+            'max_precision': 'digit_ensemble',
+            'production': 'google_vision',
+            'comparison': 'azure_vision',
+            'high_precision': 'ensemble',
+            'development': 'tesseract'
+        },
+        'available': get_available_providers()
+    }
