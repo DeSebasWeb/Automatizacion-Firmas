@@ -3,10 +3,10 @@ automation:
   pre_enter_delay: 0.3
   typing_interval: 0.01
 capture_area:
-  height: 465
-  width: 329
-  x: 928
-  y: 426
+  height: 377
+  width: 245
+  x: 730
+  y: 285
 hotkeys:
   capture_area: ctrl+f4
   capture_screen: ctrl+f5
