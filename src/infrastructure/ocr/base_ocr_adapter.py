@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import List, Dict
 from PIL import Image
 
-from ...domain.entities import CedulaRecord, RowData
+from ...domain.entities import CedulaRecord
 from ...domain.ports import OCRPort, ConfigPort
 from ..image import ImagePreprocessor
 
@@ -264,102 +264,3 @@ class BaseOCRAdapter(OCRPort, ABC):
             rows_blocks[row_idx].append(block)
 
         return rows_blocks
-
-    def _process_row_blocks(
-        self,
-        blocks: List[Dict],
-        row_index: int,
-        image_width: int,
-        column_boundary_ratio: float = 0.6
-    ) -> RowData:
-        """
-        Procesa bloques de un renglón separando nombres y cédula.
-
-        Separa los bloques en dos columnas basándose en coordenada X:
-        - Columna izquierda (0-boundary% del ancho): NOMBRES
-        - Columna derecha (boundary%-100% del ancho): CÉDULA
-
-        Args:
-            blocks: Bloques de texto del renglón
-            row_index: Índice del renglón
-            image_width: Ancho de la imagen
-            column_boundary_ratio: Ratio para separar columnas (default: 0.6 = 60%)
-
-        Returns:
-            RowData con nombres, cédula y confianza
-        """
-        # Límite de columnas
-        column_boundary = image_width * column_boundary_ratio
-
-        nombres_parts = []
-        cedula_parts = []
-        nombres_confidences = []
-        cedula_confidences = []
-
-        # Clasificar bloques por columna
-        for block in blocks:
-            if block['x'] < column_boundary:
-                # Columna izquierda - NOMBRES
-                nombres_parts.append(block['text'])
-                nombres_confidences.append(block['confidence'])
-            else:
-                # Columna derecha - CÉDULA
-                cedula_parts.append(block['text'])
-                cedula_confidences.append(block['confidence'])
-
-        # Combinar partes
-        nombres = ' '.join(nombres_parts).strip()
-        cedula_raw = ' '.join(cedula_parts).strip()
-
-        # OPTIMIZACIÓN: Corregir errores comunes de OCR antes de limpiar
-        cedula = self._corregir_errores_ocr_cedula(cedula_raw)
-
-        # Calcular confianza promedio
-        nombres_conf = sum(nombres_confidences) / len(nombres_confidences) if nombres_confidences else 0.0
-        cedula_conf = sum(cedula_confidences) / len(cedula_confidences) if cedula_confidences else 0.0
-
-        confidence = {
-            'nombres': nombres_conf,
-            'cedula': cedula_conf
-        }
-
-        # Crear texto raw para debugging
-        raw_text = f"{nombres} | {cedula_raw}".strip()
-
-        # Detectar si es renglón vacío basado en umbral de confianza
-        min_confidence = self.config.get('ocr.confidence_threshold', 0.30)
-        is_empty = (
-            (not nombres and not cedula) or
-            (confidence.get('nombres', 0) < min_confidence and confidence.get('cedula', 0) < min_confidence) or
-            (len(nombres) < 2 and len(cedula) < 6)  # Muy poco texto
-        )
-
-        # Usar factory method para crear RowData con Value Objects
-        return RowData.from_primitives(
-            row_index=row_index,
-            nombres_manuscritos=nombres,
-            cedula=cedula,
-            is_empty=is_empty,
-            confidence=confidence,
-            raw_text=raw_text
-        )
-
-    def _create_empty_row(self, row_index: int) -> RowData:
-        """
-        Crea un RowData vacío para renglones sin datos.
-
-        Args:
-            row_index: Índice del renglón
-
-        Returns:
-            RowData marcado como vacío
-        """
-        # Usar factory method para crear RowData con Value Objects
-        return RowData.from_primitives(
-            row_index=row_index,
-            nombres_manuscritos="",
-            cedula="",
-            is_empty=True,
-            confidence={},
-            raw_text=None
-        )

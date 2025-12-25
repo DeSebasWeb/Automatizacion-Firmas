@@ -1,212 +1,78 @@
-"""Entidad que representa un registro de cédula extraído (sistema legacy)."""
+"""Minimal cédula record for OCR results."""
 from dataclasses import dataclass
-from datetime import datetime
-from enum import Enum
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from ..value_objects import CedulaNumber, ConfidenceScore
-
-
-class RecordStatus(Enum):
-    """Estados posibles de un registro de cédula."""
-    PENDING = "PENDING"
-    PROCESSING = "PROCESSING"
-    COMPLETED = "COMPLETED"
-    ERROR = "ERROR"
-    SKIPPED = "SKIPPED"
 
 
 @dataclass
 class CedulaRecord:
     """
-    Entidad que representa un registro de cédula (SISTEMA LEGACY).
+    Minimal entity representing an extracted cédula number from OCR.
 
-    Esta entidad se usa para el flujo de extracción SIMPLE donde solo
-    se extraen números de cédula sin nombres asociados.
-
-    **Caso de uso:**
-        Sistema legacy que solo necesita extraer y digitar cédulas
-        sin validación fuzzy ni nombres manuscritos.
-
-    **Cuándo usar:**
-        - Solo necesitas números de cédula
-        - No necesitas validación fuzzy
-        - Usas ProcessingSession tradicional
-        - No trabajas con formularios estructurados por renglones
-
-    **Cuándo NO usar:**
-        - Si necesitas nombres + cédulas → usa RowData
-        - Si usas sistema dual OCR → usa RowData
-        - Si necesitas validación fuzzy → usa RowData + FormData
-
-    Ver docs/mejoraSOLID/01_CEDULA_RECORD_VS_ROW_DATA.md para detalles.
+    Simplified version for API usage without UI-specific state management.
 
     Attributes:
-        cedula: Número de cédula extraído (Value Object)
-        confidence: Nivel de confianza del OCR (Value Object 0.0-1.0)
-        status: Estado actual del registro (PENDING, PROCESSING, etc.)
-        index: Posición en la lista de registros
-        created_at: Timestamp de creación
-        processed_at: Timestamp de procesamiento
-        error_message: Mensaje de error si aplica
-
-    Example:
-        >>> # Sistema legacy simple
-        >>> from domain.value_objects import CedulaNumber, ConfidenceScore
-        >>> record = CedulaRecord(
-        ...     cedula=CedulaNumber("12345678"),
-        ...     confidence=ConfidenceScore.from_percentage(92.5)
-        ... )
-        >>> if record.is_valid():
-        ...     automation.type_cedula(record.cedula.value)
-        ...     record.mark_as_completed()
+        cedula: Extracted cédula number (Value Object)
+        confidence: OCR confidence score (Value Object 0.0-1.0)
+        index: Position in the source document/list
     """
     cedula: CedulaNumber
     confidence: ConfidenceScore
-    status: RecordStatus = RecordStatus.PENDING
     index: int = 0
-    created_at: datetime = None
-    processed_at: Optional[datetime] = None
-    error_message: Optional[str] = None
-
-    def __post_init__(self):
-        """Inicializa valores por defecto."""
-        if self.created_at is None:
-            self.created_at = datetime.now()
 
     @classmethod
     def from_primitives(
         cls,
         cedula: str,
         confidence: float,
-        status: RecordStatus = RecordStatus.PENDING,
-        index: int = 0,
-        created_at: datetime = None,
-        processed_at: Optional[datetime] = None,
-        error_message: Optional[str] = None
+        index: int = 0
     ) -> 'CedulaRecord':
         """
-        Factory method para crear CedulaRecord desde tipos primitivos.
-
-        Este método facilita la migración de código legacy y la creación
-        desde la capa de infraestructura que trabaja con primitivos.
+        Create CedulaRecord from primitive types.
 
         Args:
-            cedula: Número de cédula como string
-            confidence: Confianza como porcentaje (0-100) o decimal (0.0-1.0)
-            status: Estado del registro
-            index: Posición en la lista
-            created_at: Timestamp de creación
-            processed_at: Timestamp de procesamiento
-            error_message: Mensaje de error
+            cedula: Cédula number as string
+            confidence: Confidence as decimal (0.0-1.0) or percentage (0-100)
+            index: Position in list
 
         Returns:
-            CedulaRecord con Value Objects
-
-        Example:
-            >>> # Migración de código legacy
-            >>> record = CedulaRecord.from_primitives(
-            ...     cedula="12345678",
-            ...     confidence=92.5  # Acepta porcentaje
-            ... )
-            >>> print(record.cedula.value)
-            12345678
-            >>> print(record.confidence.as_percentage())
-            92.5
-
-        Note:
-            Este método auto-detecta si confidence es porcentaje (>1.0)
-            o decimal (0.0-1.0) y convierte apropiadamente.
+            CedulaRecord instance
         """
-        # Crear CedulaNumber (con validación automática)
+        # Create CedulaNumber (with validation)
         cedula_vo = CedulaNumber(cedula)
 
-        # Crear ConfidenceScore (auto-detecta formato)
+        # Create ConfidenceScore (auto-detect format)
         if confidence > 1.0:
-            # Es porcentaje (0-100)
             confidence_vo = ConfidenceScore.from_percentage(confidence)
         else:
-            # Es decimal (0.0-1.0)
             confidence_vo = ConfidenceScore(confidence)
 
         return cls(
             cedula=cedula_vo,
             confidence=confidence_vo,
-            status=status,
-            index=index,
-            created_at=created_at,
-            processed_at=processed_at,
-            error_message=error_message
+            index=index
         )
 
-    def mark_as_processing(self) -> None:
-        """Marca el registro como en procesamiento."""
-        self.status = RecordStatus.PROCESSING
-
-    def mark_as_completed(self) -> None:
-        """Marca el registro como completado."""
-        self.status = RecordStatus.COMPLETED
-        self.processed_at = datetime.now()
-
-    def mark_as_error(self, error_message: str) -> None:
-        """Marca el registro como error."""
-        self.status = RecordStatus.ERROR
-        self.error_message = error_message
-        self.processed_at = datetime.now()
-
-    def mark_as_skipped(self) -> None:
-        """Marca el registro como omitido."""
-        self.status = RecordStatus.SKIPPED
-        self.processed_at = datetime.now()
-
-    def is_valid(self, specification=None) -> bool:
+    def is_valid(self, min_confidence: float = 0.5) -> bool:
         """
-        Valida si la cédula cumple con una especificación dada.
-
-        Este método ahora usa el Patrón Specification para validaciones
-        flexibles y reutilizables, en lugar de lógica hardcodeada.
+        Check if record meets minimum quality criteria.
 
         Args:
-            specification: Especificación a evaluar. Si es None, usa
-                          validación estándar (formato + longitud + confianza)
+            min_confidence: Minimum confidence threshold (0.0-1.0)
 
         Returns:
-            True si la cédula satisface la especificación, False en caso contrario
-
-        Example:
-            >>> # Usar validación por defecto
-            >>> record.is_valid()
-            True
-            >>>
-            >>> # Usar especificación personalizada
-            >>> from domain.specifications import CedulaSpecifications
-            >>> high_conf = CedulaSpecifications.high_confidence_only(min_confidence=85.0)
-            >>> record.is_valid(high_conf)
-            False
-            >>>
-            >>> # Combinar especificaciones
-            >>> from domain.specifications import (
-            ...     CedulaFormatSpecification,
-            ...     CedulaLengthSpecification,
-            ...     ConfidenceSpecification
-            ... )
-            >>> custom_spec = (
-            ...     CedulaFormatSpecification()
-            ...     .and_(CedulaLengthSpecification(8, 10))
-            ...     .and_(ConfidenceSpecification(70.0))
-            ... )
-            >>> record.is_valid(custom_spec)
-            True
-
-        Note:
-            Para evitar circular imports, la especificación por defecto
-            se importa dinámicamente dentro del método.
+            True if valid
         """
-        if specification is None:
-            # Importación dinámica para evitar circular imports
-            from ..specifications import CedulaSpecifications
-            specification = CedulaSpecifications.valid_for_processing(
-                min_confidence=50.0
-            )
+        return (
+            self.cedula.is_valid() and
+            self.confidence.value >= min_confidence
+        )
 
-        return specification.is_satisfied_by(self)
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for API responses."""
+        return {
+            'cedula': self.cedula.value,
+            'confidence': self.confidence.as_percentage(),
+            'index': self.index
+        }

@@ -16,7 +16,14 @@
       "Bash(copy \"e:\\ProyectoFirmasAutomatizacion\\src\\infrastructure\\ocr\\google_vision_adapter.py\" \"e:\\ProyectoFirmasAutomatizacion\\src\\infrastructure\\ocr\\google_vision_adapter_backup.py\")",
       "Bash(git push:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(pytest:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(test:*)",
+      "Bash(source venv/Scripts/activate)",
+      "Bash(python:*)",
+      "Bash(taskkill:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []

@@ -10,7 +10,7 @@ except ImportError:
     GOOGLE_VISION_AVAILABLE = False
     print("ADVERTENCIA: Google Cloud Vision no está instalado. Instalar con: pip install google-cloud-vision")
 
-from ...domain.entities import CedulaRecord, RowData
+from ...domain.entities import CedulaRecord
 from ...domain.ports import ConfigPort
 from .base_ocr_adapter import BaseOCRAdapter
 from .image_converter import ImageConverter
@@ -233,7 +233,10 @@ class GoogleVisionAdapter(BaseOCRAdapter):
                 log_error_message(self.logger, "Error en extraccion de cedulas", error=e)
                 return []
 
-    def extract_full_form_data(self, image: Image.Image, expected_rows: int = 15) -> List[RowData]:
+    # MÉTODO REMOVIDO: extract_full_form_data ya no es necesario para API
+    # Usaba RowData que es específico de la UI de escritorio
+
+    def _extract_full_form_data_DEPRECATED(self, image: Image.Image, expected_rows: int = 15):
         """
         Extrae datos completos del formulario manuscrito (nombres + cédulas).
 

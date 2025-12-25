@@ -12,7 +12,7 @@ except ImportError:
     AZURE_VISION_AVAILABLE = False
     print("ADVERTENCIA: Azure Computer Vision no está instalado. Instalar con: pip install azure-ai-vision-imageanalysis")
 
-from ...domain.entities import CedulaRecord, RowData
+from ...domain.entities import CedulaRecord
 from ...domain.ports import ConfigPort
 from .base_ocr_adapter import BaseOCRAdapter
 from .image_converter import ImageConverter
@@ -297,11 +297,14 @@ class AzureVisionAdapter(BaseOCRAdapter):
                 log_error_message(self.logger, "Error en extraccion de cedulas", error=e)
                 return []
 
-    def extract_full_form_data(
+    # MÉTODO REMOVIDO: extract_full_form_data ya no es necesario para API
+    # Usaba RowData que es específico de la UI de escritorio
+
+    def _extract_full_form_data_DEPRECATED(
         self,
         image: Image.Image,
         expected_rows: int = 15
-    ) -> List[RowData]:
+    ):
         """
         Extrae datos completos del formulario (nombres + cédulas) por renglón.
 

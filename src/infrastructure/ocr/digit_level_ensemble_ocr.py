@@ -5,7 +5,7 @@ from typing import List, Dict, Optional, Tuple
 from PIL import Image
 import difflib
 
-from ...domain.entities import CedulaRecord, RowData
+from ...domain.entities import CedulaRecord
 from ...domain.ports import OCRPort, ConfigPort
 from .ensemble import (
     DigitConfidenceExtractor,
@@ -573,27 +573,6 @@ class DigitLevelEnsembleOCR(OCRPort):
             Imagen preprocesada
         """
         return self.primary_ocr.preprocess_image(image)
-
-    def extract_full_form_data(
-        self,
-        image: Image.Image,
-        expected_rows: int = 15
-    ) -> List[RowData]:
-        """
-        Extrae datos completos del formulario.
-
-        Por ahora delega al OCR primario. En el futuro podría combinarse
-        también a nivel de dígito.
-
-        Args:
-            image: Imagen del formulario
-            expected_rows: Número esperado de renglones
-
-        Returns:
-            Lista de RowData
-        """
-        # TODO: Implementar combinación a nivel de dígito para formularios completos
-        return self.primary_ocr.extract_full_form_data(image, expected_rows)
 
     def extract_name_cedula_pairs(self, image: Image.Image) -> List[Dict]:
         """
