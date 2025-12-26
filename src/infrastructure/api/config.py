@@ -112,9 +112,8 @@ class Settings(BaseSettings):
     # =====================================================================
     # USAGE TRACKING
     # =====================================================================
-    USAGE_TRACKING_ENABLED: bool = Field(default=True, description="Track API usage")
-    COST_MARKUP_PERCENTAGE: float = Field(default=30.0, description="Markup % on provider costs")
-    
+    USAGE_TRACKING_ENABLED: bool = Field(default=True, description="Track API usage and costs")
+
     # =====================================================================
     # FILE UPLOAD
     # =====================================================================
