@@ -74,14 +74,7 @@ class Settings(BaseSettings):
     CORS_ALLOW_CREDENTIALS: bool = Field(default=True, description="Allow credentials")
     CORS_ALLOW_METHODS: list[str] = Field(default=["*"], description="Allowed HTTP methods")
     CORS_ALLOW_HEADERS: list[str] = Field(default=["*"], description="Allowed HTTP headers")
-    
-    # =====================================================================
-    # RATE LIMITING
-    # =====================================================================
-    RATE_LIMIT_ENABLED: bool = Field(default=True, description="Enable rate limiting")
-    RATE_LIMIT_PER_MINUTE: int = Field(default=60, description="Requests per minute")
-    RATE_LIMIT_PER_HOUR: int = Field(default=1000, description="Requests per hour")
-    
+
     # =====================================================================
     # LOGGING
     # =====================================================================
@@ -108,11 +101,6 @@ class Settings(BaseSettings):
     # Azure Computer Vision
     AZURE_VISION_ENDPOINT: str | None = Field(default=None, description="Azure Vision endpoint")
     AZURE_VISION_KEY: str | None = Field(default=None, description="Azure Vision API key")
-    
-    # =====================================================================
-    # USAGE TRACKING
-    # =====================================================================
-    USAGE_TRACKING_ENABLED: bool = Field(default=True, description="Track API usage and costs")
 
     # =====================================================================
     # FILE UPLOAD
