@@ -1,9 +1,21 @@
 """FastAPI application entry point."""
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .routes import health
+from src.infrastructure.database.session import init_db, close_db
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle startup and shutdown events."""
+    # Startup: Initialize database connection pool
+    init_db()
+    yield
+    # Shutdown: Close database connections
+    close_db()
 
 
 def create_app() -> FastAPI:
@@ -19,7 +31,8 @@ def create_app() -> FastAPI:
         debug=settings.DEBUG,
         docs_url="/docs",
         redoc_url="/redoc",
-        openapi_url="/openapi.json"
+        openapi_url="/openapi.json",
+        lifespan=lifespan
     )
 
     # Configure CORS middleware

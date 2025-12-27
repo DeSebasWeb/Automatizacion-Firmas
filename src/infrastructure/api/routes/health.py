@@ -2,6 +2,9 @@
 from fastapi import APIRouter
 from datetime import datetime
 
+from ..config import settings
+from src.infrastructure.database.session import check_database_connection
+
 router = APIRouter(prefix="/health", tags=["health"])
 
 
@@ -10,10 +13,19 @@ async def health_check():
     """
     Health check endpoint.
 
-    Returns the API status and timestamp.
+    Verifies:
+    - API is running
+    - Database connection is healthy
+
+    Returns the API status, version, and database connectivity.
     """
+    db_healthy = check_database_connection()
+
     return {
-        "status": "healthy",
+        "status": "healthy" if db_healthy else "degraded",
+        "version": settings.VERSION,
+        "environment": settings.ENVIRONMENT,
+        "database": "connected" if db_healthy else "disconnected",
         "timestamp": datetime.utcnow().isoformat(),
         "service": "VerifyID OCR API"
     }

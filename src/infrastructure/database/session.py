@@ -1,65 +1,111 @@
-"""Database session configuration and management."""
+"""Database session management - Production grade."""
 
-from contextlib import contextmanager
-from typing import Generator
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy import create_engine, event, text
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import QueuePool
+from sqlalchemy.exc import DisconnectionError
+import structlog
 
+from ..api.config import settings
 
-class DatabaseSession:
-    """Database session manager following best practices."""
+logger = structlog.get_logger(__name__)
 
-    def __init__(self, database_url: str, echo: bool = False):
-        """
-        Initialize database session manager.
+# =========================================================================
+# GLOBAL ENGINE (Singleton - se crea UNA sola vez)
+# =========================================================================
 
-        Args:
-            database_url: PostgreSQL connection string
-            echo: Enable SQL query logging
-        """
-        self.engine = create_engine(
-            database_url,
-            poolclass=QueuePool,
-            pool_size=5,
-            max_overflow=10,
-            pool_pre_ping=True,  # Verify connections before using
-            echo=echo,
-        )
-        self.SessionLocal = sessionmaker(
-            autocommit=False, autoflush=False, bind=self.engine
-        )
+engine = create_engine(
+    settings.DATABASE_URL,
 
-    @contextmanager
-    def get_session(self) -> Generator[Session, None, None]:
-        """
-        Get a database session with automatic cleanup.
+    # Pool configuration
+    poolclass=QueuePool,
+    pool_size=settings.DATABASE_POOL_SIZE,
+    max_overflow=settings.DATABASE_MAX_OVERFLOW,
+    pool_timeout=settings.DATABASE_POOL_TIMEOUT,
+    pool_recycle=settings.DATABASE_POOL_RECYCLE,
+    pool_pre_ping=True,  # Verify connections before use
 
-        Yields:
-            SQLAlchemy Session
+    # Logging
+    echo=settings.DATABASE_ECHO,
 
-        Example:
-            with db.get_session() as session:
-                user = session.query(User).first()
-        """
-        session = self.SessionLocal()
-        try:
-            yield session
-            session.commit()
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
+    # Performance
+    connect_args={
+        "connect_timeout": 10,
+        "options": "-c timezone=utc"
+    }
+)
 
-    def create_all(self):
-        """Create all tables (use only for testing)."""
-        from src.infrastructure.database.base import Base
+# =========================================================================
+# SESSION FACTORY (Singleton)
+# =========================================================================
 
-        Base.metadata.create_all(bind=self.engine)
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine
+)
 
-    def drop_all(self):
-        """Drop all tables (use only for testing)."""
-        from src.infrastructure.database.base import Base
+# =========================================================================
+# CONNECTION POOL MONITORING
+# =========================================================================
 
-        Base.metadata.drop_all(bind=self.engine)
+@event.listens_for(engine, "connect")
+def receive_connect(dbapi_conn, connection_record):
+    """Log successful connections."""
+    logger.debug("database_connection_established")
+
+@event.listens_for(engine, "checkout")
+def receive_checkout(dbapi_conn, connection_record, connection_proxy):
+    """Log connection checkout from pool."""
+    logger.debug("database_connection_checkout")
+
+@event.listens_for(engine, "checkin")
+def receive_checkin(dbapi_conn, connection_record):
+    """Log connection return to pool."""
+    logger.debug("database_connection_checkin")
+
+# =========================================================================
+# HEALTH CHECK
+# =========================================================================
+
+def check_database_connection() -> bool:
+    """
+    Verify database connectivity.
+
+    Returns:
+        True if connection is healthy, False otherwise.
+    """
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return True
+    except Exception as e:
+        logger.error("database_health_check_failed", error=str(e))
+        return False
+
+# =========================================================================
+# LIFECYCLE MANAGEMENT (for FastAPI lifespan events)
+# =========================================================================
+
+def init_db():
+    """Initialize database connection pool (called at app startup)."""
+    try:
+        logger.info("initializing_database_connection_pool")
+        # Test connection
+        if check_database_connection():
+            logger.info("database_connection_pool_initialized",
+                       pool_size=settings.DATABASE_POOL_SIZE)
+        else:
+            logger.error("database_connection_pool_initialization_failed")
+    except Exception as e:
+        logger.error("database_initialization_error", error=str(e))
+        raise
+
+def close_db():
+    """Close database connections (called at app shutdown)."""
+    try:
+        logger.info("closing_database_connections")
+        engine.dispose()
+        logger.info("database_connections_closed")
+    except Exception as e:
+        logger.error("database_close_error", error=str(e))
