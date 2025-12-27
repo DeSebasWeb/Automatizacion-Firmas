@@ -17,6 +17,7 @@ class User(Base):
     """
 
     __tablename__ = "users"
+    __table_args__ = {'extend_existing': True}
 
     # Primary Key
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())

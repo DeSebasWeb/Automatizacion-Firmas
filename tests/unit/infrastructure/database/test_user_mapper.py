@@ -1,15 +1,33 @@
 """Unit tests for UserMapper."""
 import pytest
+import sys
+from pathlib import Path
 from datetime import datetime
 from uuid import uuid4
 
-# Direct imports without src. prefix to avoid circular import through __init__.py
+# Import domain without going through infrastructure __init__.py to avoid circular imports
 from domain.entities.user import User as DomainUser
 from domain.value_objects.user_id import UserId
 from domain.value_objects.email import Email
 from domain.value_objects.hashed_password import HashedPassword
-from infrastructure.database.models.user import User as DBUser
-from infrastructure.database.mappers.user_mapper import UserMapper
+
+# Import models and mappers directly from their modules, not through package __init__.py
+# This avoids triggering infrastructure.database.__init__.py which causes circular import
+import importlib.util
+
+# Load User model directly
+user_model_path = Path(__file__).parent.parent.parent.parent.parent / "src" / "infrastructure" / "database" / "models" / "user.py"
+spec = importlib.util.spec_from_file_location("user_model", user_model_path)
+user_model = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(user_model)
+DBUser = user_model.User
+
+# Load UserMapper directly
+mapper_path = Path(__file__).parent.parent.parent.parent.parent / "src" / "infrastructure" / "database" / "mappers" / "user_mapper.py"
+spec = importlib.util.spec_from_file_location("user_mapper", mapper_path)
+mapper_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mapper_module)
+UserMapper = mapper_module.UserMapper
 
 
 @pytest.fixture

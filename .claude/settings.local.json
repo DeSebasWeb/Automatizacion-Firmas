@@ -23,7 +23,9 @@
       "Bash(source venv/Scripts/activate)",
       "Bash(python:*)",
       "Bash(taskkill:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(dir:*)",
+      "Bash(touch:*)"
     ],
     "deny": [],
     "ask": []

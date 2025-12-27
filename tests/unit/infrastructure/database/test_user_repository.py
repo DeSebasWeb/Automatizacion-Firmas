@@ -1,12 +1,14 @@
 """Unit tests for UserRepository implementation."""
 import pytest
+import sys
+from pathlib import Path
 from datetime import datetime
 from uuid import uuid4
 from unittest.mock import Mock, MagicMock, patch
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-# Direct imports without src. prefix to avoid circular import through __init__.py
+# Import domain without going through infrastructure __init__.py to avoid circular imports
 from domain.entities.user import User as DomainUser
 from domain.value_objects.user_id import UserId
 from domain.value_objects.email import Email
@@ -16,8 +18,24 @@ from domain.exceptions import (
     DuplicateEmailError,
     RepositoryError
 )
-from infrastructure.database.models.user import User as DBUser
-from infrastructure.database.repositories.user_repository_impl import UserRepository
+
+# Import models and repository directly from their modules, not through package __init__.py
+# This avoids triggering infrastructure.database.__init__.py which causes circular import
+import importlib.util
+
+# Load User model directly
+user_model_path = Path(__file__).parent.parent.parent.parent.parent / "src" / "infrastructure" / "database" / "models" / "user.py"
+spec = importlib.util.spec_from_file_location("user_model", user_model_path)
+user_model = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(user_model)
+DBUser = user_model.User
+
+# Load UserRepository directly
+repo_path = Path(__file__).parent.parent.parent.parent.parent / "src" / "infrastructure" / "database" / "repositories" / "user_repository_impl.py"
+spec = importlib.util.spec_from_file_location("user_repository", repo_path)
+repo_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(repo_module)
+UserRepository = repo_module.UserRepository
 
 
 @pytest.fixture
