@@ -161,6 +161,9 @@ class UserRepository(IUserRepository):
 
             return self._mapper.to_domain(db_user)
 
+        except UserNotFoundError:
+            # Re-raise domain exceptions as-is (don't wrap in RepositoryError)
+            raise
         except SQLAlchemyError as e:
             self._session.rollback()
             logger.error("user_update_failed", user_id=str(user.id), error=str(e))
@@ -196,14 +199,20 @@ class UserRepository(IUserRepository):
             raise RepositoryError(f"Failed to delete user: {e}") from e
 
     def exists_by_email(self, email: Email) -> bool:
-        """Check if user with email exists."""
-        try:
-            exists = self._session.query(DBUser).filter(
-                DBUser.email == str(email)
-            ).first() is not None
+        """
+        Check if user with email exists.
 
-            logger.debug("email_existence_check", email=str(email), exists=exists)
-            return exists
+        Uses efficient EXISTS query instead of loading entire row.
+        """
+        try:
+            from sqlalchemy import exists, select
+
+            # Use EXISTS for efficiency (doesn't load row data)
+            exists_query = select(exists().where(DBUser.email == str(email)))
+            result = self._session.execute(exists_query).scalar()
+
+            logger.debug("email_existence_check", email=str(email), exists=result)
+            return result
 
         except SQLAlchemyError as e:
             logger.error("exists_check_failed", email=str(email), error=str(e))

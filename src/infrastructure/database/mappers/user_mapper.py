@@ -48,6 +48,10 @@ class UserMapper:
         """
         Convert domain entity to database model.
 
+        IMPORTANT: For new users created with User.create(), the id will be
+        a generated UUID from the domain layer. For database-generated timestamps,
+        created_at and updated_at should be set by the DB on INSERT if None.
+
         Args:
             domain_user: Domain User entity
 
@@ -60,6 +64,8 @@ class UserMapper:
             password_hash=domain_user.password.hash_value,
             email_verified=domain_user.email_verified,
             is_active=domain_user.is_active,
+            # NOTE: We pass timestamps to preserve domain entity state
+            # SQLAlchemy will use these values if provided, or DB defaults if None
             created_at=domain_user.created_at,
             updated_at=domain_user.updated_at,
             last_login_at=domain_user.last_login_at
@@ -72,13 +78,19 @@ class UserMapper:
 
         Useful for update operations - modifies existing db_user.
 
+        IMPORTANT:
+        - ID is NOT updated (immutable primary key)
+        - created_at is NOT updated (immutable creation timestamp)
+        - All other fields are synchronized from domain entity
+
         Args:
-            db_user: Existing SQLAlchemy model
+            db_user: Existing SQLAlchemy model (will be modified in-place)
             domain_user: Domain entity with new data
 
         Returns:
-            Updated database model (same instance)
+            Updated database model (same instance as db_user parameter)
         """
+        # Update mutable fields only (ID and created_at are immutable)
         db_user.email = str(domain_user.email)
         db_user.password_hash = domain_user.password.hash_value
         db_user.email_verified = domain_user.email_verified
