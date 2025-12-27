@@ -49,7 +49,7 @@ class UsageEvent(Base):
     # Relationships
     user = relationship("User", back_populates="usage_events")
     event_type = relationship("UsageEventType")
-    metadata = relationship("UsageEventMetadata", back_populates="usage_event", cascade="all, delete-orphan")
+    event_metadata = relationship("UsageEventMetadata", back_populates="usage_event", cascade="all, delete-orphan")
 
     @property
     def calculated_billable_amount(self) -> Decimal:

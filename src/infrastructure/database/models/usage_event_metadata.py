@@ -37,7 +37,7 @@ class UsageEventMetadata(Base):
     created_at = Column(DateTime(timezone=False), server_default=func.current_timestamp())
 
     # Relationships
-    usage_event = relationship("UsageEvent", back_populates="metadata")
+    usage_event = relationship("UsageEvent", back_populates="event_metadata")
 
     def __repr__(self) -> str:
         return f"<UsageEventMetadata(id={self.id}, event_id={self.usage_event_id}, key='{self.key}')>"
