@@ -1,7 +1,7 @@
 """Period type lookup table model."""
 
 from sqlalchemy import Column, Integer, SmallInteger, String
-from src.infrastructure.database.base import Base
+from ..base import Base
 
 
 class PeriodType(Base):

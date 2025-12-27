@@ -1,7 +1,7 @@
 """Invoice status lookup table model."""
 
 from sqlalchemy import Boolean, Column, Integer, SmallInteger, String, Text
-from src.infrastructure.database.base import Base
+from ..base import Base
 
 
 class InvoiceStatus(Base):

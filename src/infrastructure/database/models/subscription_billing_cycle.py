@@ -1,7 +1,7 @@
 """Subscription billing cycle lookup table model."""
 
 from sqlalchemy import Boolean, Column, Integer, SmallInteger, String
-from src.infrastructure.database.base import Base
+from ..base import Base
 
 
 class SubscriptionBillingCycle(Base):

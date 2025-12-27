@@ -2,7 +2,7 @@
 
 from sqlalchemy import Column, ForeignKey, Integer, SmallInteger, String, Text
 from sqlalchemy.orm import relationship
-from src.infrastructure.database.base import Base
+from ..base import Base
 
 
 class UsageEventType(Base):

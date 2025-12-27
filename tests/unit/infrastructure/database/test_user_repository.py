@@ -22,17 +22,42 @@ from domain.exceptions import (
 # Import models and repository directly from their modules, not through package __init__.py
 # This avoids triggering infrastructure.database.__init__.py which causes circular import
 import importlib.util
+import types
 
-# Load User model directly
+# Load Base first (needed by User model)
+base_path = Path(__file__).parent.parent.parent.parent.parent / "src" / "infrastructure" / "database" / "base.py"
+spec = importlib.util.spec_from_file_location("base_module", base_path)
+base_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(base_module)
+
+# Create fake parent package structure for relative imports
+sys.modules['infrastructure'] = types.ModuleType('infrastructure')
+sys.modules['infrastructure.database'] = types.ModuleType('infrastructure.database')
+sys.modules['infrastructure.database.base'] = base_module
+sys.modules['infrastructure.database.models'] = types.ModuleType('infrastructure.database.models')
+
+# Load User model (relative imports will now work)
 user_model_path = Path(__file__).parent.parent.parent.parent.parent / "src" / "infrastructure" / "database" / "models" / "user.py"
-spec = importlib.util.spec_from_file_location("user_model", user_model_path)
+spec = importlib.util.spec_from_file_location("infrastructure.database.models.user", user_model_path)
 user_model = importlib.util.module_from_spec(spec)
+sys.modules['infrastructure.database.models.user'] = user_model
 spec.loader.exec_module(user_model)
 DBUser = user_model.User
 
+# Create fake mappers and repositories packages
+sys.modules['infrastructure.database.mappers'] = types.ModuleType('infrastructure.database.mappers')
+sys.modules['infrastructure.database.repositories'] = types.ModuleType('infrastructure.database.repositories')
+
+# Load UserMapper first (needed by UserRepository)
+mapper_path = Path(__file__).parent.parent.parent.parent.parent / "src" / "infrastructure" / "database" / "mappers" / "user_mapper.py"
+spec = importlib.util.spec_from_file_location("infrastructure.database.mappers.user_mapper", mapper_path)
+mapper_module = importlib.util.module_from_spec(spec)
+sys.modules['infrastructure.database.mappers.user_mapper'] = mapper_module
+spec.loader.exec_module(mapper_module)
+
 # Load UserRepository directly
 repo_path = Path(__file__).parent.parent.parent.parent.parent / "src" / "infrastructure" / "database" / "repositories" / "user_repository_impl.py"
-spec = importlib.util.spec_from_file_location("user_repository", repo_path)
+spec = importlib.util.spec_from_file_location("infrastructure.database.repositories.user_repository_impl", repo_path)
 repo_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(repo_module)
 UserRepository = repo_module.UserRepository

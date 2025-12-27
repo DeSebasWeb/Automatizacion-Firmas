@@ -6,7 +6,7 @@ from sqlalchemy import Column, DateTime, ForeignKey, Integer, Numeric, SmallInte
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from src.infrastructure.database.base import Base
+from ..base import Base
 
 
 class UsageEvent(Base):

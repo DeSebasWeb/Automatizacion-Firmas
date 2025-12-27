@@ -1,7 +1,7 @@
 """Limit type lookup table model."""
 
 from sqlalchemy import Boolean, Column, SmallInteger, String, Text
-from src.infrastructure.database.base import Base
+from ..base import Base
 
 
 class LimitType(Base):

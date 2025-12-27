@@ -1,7 +1,7 @@
 """Invoice item type lookup table model."""
 
 from sqlalchemy import Column, SmallInteger, String, Text
-from src.infrastructure.database.base import Base
+from ..base import Base
 
 
 class InvoiceItemType(Base):
