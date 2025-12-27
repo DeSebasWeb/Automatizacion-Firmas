@@ -3,12 +3,13 @@ import pytest
 from datetime import datetime
 from uuid import uuid4
 
-from src.domain.entities.user import User as DomainUser
-from src.domain.value_objects.user_id import UserId
-from src.domain.value_objects.email import Email
-from src.domain.value_objects.hashed_password import HashedPassword
-from src.infrastructure.database.models.user import User as DBUser
-from src.infrastructure.database.mappers.user_mapper import UserMapper
+# Direct imports without src. prefix to avoid circular import through __init__.py
+from domain.entities.user import User as DomainUser
+from domain.value_objects.user_id import UserId
+from domain.value_objects.email import Email
+from domain.value_objects.hashed_password import HashedPassword
+from infrastructure.database.models.user import User as DBUser
+from infrastructure.database.mappers.user_mapper import UserMapper
 
 
 @pytest.fixture

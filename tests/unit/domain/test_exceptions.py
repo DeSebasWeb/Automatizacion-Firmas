@@ -1,6 +1,7 @@
 """Unit tests for domain exceptions."""
 import pytest
-from src.domain.exceptions import (
+# Direct imports without src. prefix to avoid circular import through __init__.py
+from domain.exceptions import (
     DomainException,
     RepositoryError,
     UserNotFoundError,
