@@ -48,3 +48,8 @@ Thumbs.db
 # Application specific
 captures/
 *.db
+
+# Coverage reports
+htmlcov/
+.coverage
+coverage.xml
