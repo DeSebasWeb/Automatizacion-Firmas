@@ -2,6 +2,9 @@
 from .cedula_number import CedulaNumber, CedulaNumbers
 from .confidence_score import ConfidenceScore, ConfidenceThresholds
 from .coordinate import Coordinate, Rectangle
+from .email import Email
+from .hashed_password import HashedPassword
+from .user_id import UserId
 
 __all__ = [
     # Cédulas
@@ -15,4 +18,9 @@ __all__ = [
     # Coordenadas
     'Coordinate',
     'Rectangle',
+
+    # Autenticación
+    'Email',
+    'HashedPassword',
+    'UserId',
 ]
