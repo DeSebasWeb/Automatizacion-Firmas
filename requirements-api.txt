@@ -8,3 +8,5 @@ sqlalchemy==2.0.25
 alembic==1.13.1
 psycopg2-binary==2.9.9
 sqlacodegen
+bcrypt==4.1.2
+structlog==24.1.0
