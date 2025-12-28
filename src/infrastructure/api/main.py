@@ -3,9 +3,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .config import settings
+from ..config import settings
 from .routes import health
-from src.infrastructure.database.session import init_db, close_db
+from ..database.session import init_db, close_db
 
 
 @asynccontextmanager

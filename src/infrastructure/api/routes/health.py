@@ -2,7 +2,7 @@
 from fastapi import APIRouter
 from datetime import datetime
 
-from ..config import settings
+from ...config import settings
 from ...database.session import check_database_connection
 
 router = APIRouter(prefix="/health", tags=["health"])

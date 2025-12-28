@@ -6,7 +6,7 @@ from sqlalchemy.pool import QueuePool
 from sqlalchemy.exc import DisconnectionError
 import structlog
 
-from ..api.config import settings
+from ..config import settings
 
 logger = structlog.get_logger(__name__)
 
