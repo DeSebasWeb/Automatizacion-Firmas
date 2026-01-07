@@ -1,3 +1,4 @@
 """API routes package."""
+from . import health, auth
 
-__all__ = []
+__all__ = ["health", "auth"]

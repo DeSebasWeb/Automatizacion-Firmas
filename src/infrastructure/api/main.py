@@ -3,8 +3,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from ..config import settings
-from .routes import health
+from .config import settings
+from .routes import health, auth
 from ..database.session import init_db, close_db
 
 
@@ -46,6 +46,7 @@ def create_app() -> FastAPI:
 
     # Include routers
     app.include_router(health.router)
+    app.include_router(auth.router, prefix="/api/v1")
 
     return app
 
