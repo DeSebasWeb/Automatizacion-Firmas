@@ -29,14 +29,11 @@ def get_db() -> Generator[Session, None, None]:
     """
     db = SessionLocal()
     try:
-        logger.debug("database_session_created")
         yield db
         db.commit()  # Commit if no exceptions
-        logger.debug("database_session_committed")
     except Exception as e:
         db.rollback()
         logger.error("database_session_rollback", error=str(e))
         raise
     finally:
         db.close()
-        logger.debug("database_session_closed")

@@ -46,23 +46,28 @@ SessionLocal = sessionmaker(
 )
 
 # =========================================================================
-# CONNECTION POOL MONITORING
+# CONNECTION POOL MONITORING (only enabled in debug mode)
 # =========================================================================
 
-@event.listens_for(engine, "connect")
-def receive_connect(dbapi_conn, connection_record):
-    """Log successful connections."""
-    logger.debug("database_connection_established")
+# NOTE: These connection pool events generate MANY logs (one per query).
+# Only enable them when debugging connection pool issues.
+# In production, this creates excessive noise and performance overhead.
 
-@event.listens_for(engine, "checkout")
-def receive_checkout(dbapi_conn, connection_record, connection_proxy):
-    """Log connection checkout from pool."""
-    logger.debug("database_connection_checkout")
+if settings.DEBUG and settings.LOG_LEVEL == "DEBUG":
+    @event.listens_for(engine, "connect")
+    def receive_connect(dbapi_conn, connection_record):
+        """Log successful connections (DEBUG only)."""
+        logger.debug("database_connection_established")
 
-@event.listens_for(engine, "checkin")
-def receive_checkin(dbapi_conn, connection_record):
-    """Log connection return to pool."""
-    logger.debug("database_connection_checkin")
+    @event.listens_for(engine, "checkout")
+    def receive_checkout(dbapi_conn, connection_record, connection_proxy):
+        """Log connection checkout from pool (DEBUG only)."""
+        logger.debug("database_connection_checkout")
+
+    @event.listens_for(engine, "checkin")
+    def receive_checkin(dbapi_conn, connection_record):
+        """Log connection return to pool (DEBUG only)."""
+        logger.debug("database_connection_checkin")
 
 # =========================================================================
 # HEALTH CHECK
