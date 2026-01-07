@@ -1,9 +1,9 @@
 """Implementación de logger estructurado usando structlog."""
-import logging
+import os
 import structlog
 from pathlib import Path
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from ...domain.ports import LoggerPort
 
@@ -45,40 +45,26 @@ class StructuredLogger(LoggerPort):
 
         Args:
             log_dir: Directorio para archivos de log
+
+        Note:
+            This method is deprecated. Use src.infrastructure.logging.configure_structlog instead.
+            Kept for backward compatibility with OCR application.
         """
-        # Crear directorio de logs si no existe
+        from ...infrastructure.logging import configure_structlog
+
+        # Obtener nivel de log desde variable de entorno
+        log_level_str = os.getenv("LOG_LEVEL", "INFO")
+
+        # Crear archivo de log con timestamp
         log_path = Path(log_dir)
-        log_path.mkdir(exist_ok=True)
-
-        # Configurar archivo de log con timestamp
         timestamp = datetime.now().strftime("%Y%m%d")
-        log_file = log_path / f"app_{timestamp}.log"
+        log_file = str(log_path / f"app_{timestamp}.log")
 
-        # Configurar logging estándar de Python
-        logging.basicConfig(
-            format="%(message)s",
-            level=logging.INFO,
-            handlers=[
-                logging.FileHandler(log_file, encoding='utf-8'),
-                logging.StreamHandler()
-            ]
-        )
-
-        # Configurar structlog
-        structlog.configure(
-            processors=[
-                structlog.contextvars.merge_contextvars,
-                structlog.processors.add_log_level,
-                structlog.processors.TimeStamper(fmt="iso"),
-                structlog.processors.StackInfoRenderer(),
-                structlog.processors.format_exc_info,
-                structlog.processors.UnicodeDecoder(),
-                structlog.processors.JSONRenderer()
-            ],
-            wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
-            context_class=dict,
-            logger_factory=structlog.PrintLoggerFactory(),
-            cache_logger_on_first_use=True,
+        # Use centralized configuration
+        configure_structlog(
+            log_level=log_level_str,
+            use_json=True,
+            log_file=log_file
         )
 
     def info(self, message: str, **kwargs: Any) -> None:
