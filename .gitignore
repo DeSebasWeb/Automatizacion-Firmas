@@ -56,3 +56,5 @@ coverage.xml
 
 #claude files
 .claude/
+# Claude Code local settings
+.claude/
