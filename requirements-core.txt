@@ -2,11 +2,11 @@
 # No UI dependencies (PyQt6, PyAutoGUI, etc.)
 
 # Environment management
-python-dotenv==1.0.0
+python-dotenv==1.2.1
 
 # Cloud OCR providers
-google-cloud-vision>=3.5.0
-azure-ai-vision-imageanalysis>=1.0.0b2
+google-cloud-vision>=3.11.0
+azure-ai-vision-imageanalysis>=1.0.0
 
 # Image processing
 opencv-python>=4.9.0.80

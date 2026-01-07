@@ -5,31 +5,24 @@
 # -----------------------------------------------------------------------------
 # CORE
 # -----------------------------------------------------------------------------
-python-dotenv==1.0.0
-
-# -----------------------------------------------------------------------------
-# GUI (Interfaz Gráfica)
-# -----------------------------------------------------------------------------
-PyQt6==6.6.1
-PyQt6-Qt6==6.6.1
+python-dotenv==1.2.1
 
 # -----------------------------------------------------------------------------
 # OCR Y PROCESAMIENTO DE IMÁGENES
 # -----------------------------------------------------------------------------
 
 # Google Cloud Vision API - OCR principal (óptimo para escritura manual)
-google-cloud-vision>=3.5.0
+# Versión 3.11.0: Modelo OCR mejorado + Handwriting OCR GA + mejor accuracy
+google-cloud-vision>=3.11.0
 
 # Azure Computer Vision API - OCR alternativo (para comparación)
-azure-ai-vision-imageanalysis>=1.0.0b2
+# Versión 1.0.0: GA release, Image Analysis 4.0 API con mejor OCR
+azure-ai-vision-imageanalysis>=1.0.0
 
 # Procesamiento de imágenes
 opencv-python>=4.9.0.80  # CRÍTICO: Preprocesamiento avanzado de imágenes
 Pillow>=10.3.0           # Manipulación de imágenes
 numpy>=1.26.4            # Operaciones numéricas
-
-# Tesseract OCR (legacy, opcional)
-pytesseract==0.3.10
 
 # -----------------------------------------------------------------------------
 # OCR AVANZADO ADICIONAL (OPCIONALES - Solo si necesitas más motores)
@@ -43,13 +36,6 @@ pytesseract==0.3.10
 # easyocr==1.7.1
 # torch==2.1.2
 # torchvision==0.16.2
-
-# -----------------------------------------------------------------------------
-# AUTOMATIZACIÓN
-# -----------------------------------------------------------------------------
-pyautogui==0.9.54  # Automatización de GUI
-pynput==1.7.6      # Hotkeys globales + listeners para pausas ESC/F9
-
 # -----------------------------------------------------------------------------
 # VALIDACIÓN FUZZY
 # -----------------------------------------------------------------------------
