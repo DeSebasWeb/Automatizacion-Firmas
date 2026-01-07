@@ -50,7 +50,7 @@ class TestUserMapperUpdate:
         db_user = create_mock_db_user(
             id=original_id,
             email="old@example.com",
-            password_hash="$2b$12$OldHashValue",
+            password_hash="$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5NU8fW.lQ4F9y",
             email_verified=False,
             is_active=True,
             created_at=original_created_at,
@@ -61,7 +61,7 @@ class TestUserMapperUpdate:
         domain_user = DomainUser(
             id=UserId.from_string(str(original_id)),
             email=Email.from_string("new@example.com"),
-            password=HashedPassword.from_hash("$2b$12$NewHashValue"),
+            password=HashedPassword.from_hash("$2b$12$KIXw4fWULy7Cp5nmNx0EHOv6Oj0A4VjCIj6gL5z8T3iqR4M9XKZK6"),
             email_verified=True,
             is_active=True,
             created_at=original_created_at,  # Should NOT be updated
@@ -75,7 +75,7 @@ class TestUserMapperUpdate:
         # Assert
         assert result is db_user  # Same instance returned
         assert db_user.email == "new@example.com"
-        assert db_user.password_hash == "$2b$12$NewHashValue"
+        assert db_user.password_hash == "$2b$12$KIXw4fWULy7Cp5nmNx0EHOv6Oj0A4VjCIj6gL5z8T3iqR4M9XKZK6"
         assert db_user.email_verified is True
         assert db_user.updated_at == datetime(2024, 2, 1, 14, 30, 0)
         assert db_user.last_login_at == datetime(2024, 1, 15, 10, 0, 0)
@@ -89,7 +89,7 @@ class TestUserMapperUpdate:
         db_user = create_mock_db_user(
             id=original_id,
             email="test@example.com",
-            password_hash="$2b$12$OriginalHash",
+            password_hash="$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5NU8fW.lQ4F9y",
             email_verified=False,
             is_active=True,
             created_at=original_created_at,
@@ -104,7 +104,7 @@ class TestUserMapperUpdate:
         domain_user = DomainUser(
             id=UserId.from_string(str(different_id)),
             email=Email.from_string("updated@example.com"),
-            password=HashedPassword.from_hash("$2b$12$UpdatedHash"),
+            password=HashedPassword.from_hash("$2b$12$KIXw4fWULy7Cp5nmNx0EHOv6Oj0A4VjCIj6gL5z8T3iqR4M9XKZK6"),
             email_verified=True,
             is_active=True,
             created_at=different_created_at,  # Different, should be ignored
@@ -122,10 +122,12 @@ class TestUserMapperUpdate:
     def test_update_db_from_domain_updates_password_hash(self):
         """update_db_from_domain() should update password hash on password change."""
         # Arrange
+        old_hash = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5NU8fW.lQ4F9y"
+
         db_user = create_mock_db_user(
             id=UUID("550e8400-e29b-41d4-a716-446655440000"),
             email="test@example.com",
-            password_hash="$2b$12$OldPasswordHash",
+            password_hash=old_hash,
             email_verified=True,
             is_active=True,
             created_at=datetime(2024, 1, 1, 12, 0, 0),
@@ -145,7 +147,7 @@ class TestUserMapperUpdate:
         UserMapper.update_db_from_domain(db_user, domain_user)
 
         # Assert
-        assert db_user.password_hash != "$2b$12$OldPasswordHash"
+        assert db_user.password_hash != old_hash
         assert db_user.password_hash == domain_user.password.hash_value
 
     def test_update_db_from_domain_updates_account_status(self):

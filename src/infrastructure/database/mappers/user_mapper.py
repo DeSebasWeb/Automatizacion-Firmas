@@ -1,8 +1,8 @@
 """User entity mapper - Domain ↔ Persistence."""
-from domain.entities.user import User as DomainUser
-from domain.value_objects.user_id import UserId
-from domain.value_objects.email import Email
-from domain.value_objects.hashed_password import HashedPassword
+from src.domain.entities.user import User as DomainUser
+from src.domain.value_objects.user_id import UserId
+from src.domain.value_objects.email import Email
+from src.domain.value_objects.hashed_password import HashedPassword
 from ..models.user import User as DBUser
 
 
