@@ -145,3 +145,27 @@ class IUserRepository(ABC):
             RepositoryError: If query fails
         """
         pass
+
+    def save(self, user: User) -> User:
+        """
+        Save user (create if new, update if existing).
+
+        This is a convenience method that determines whether to create
+        or update based on whether the user exists in the database.
+
+        Args:
+            user: User entity to save
+
+        Returns:
+            Saved user entity
+
+        Raises:
+            DuplicateEmailError: If email already exists (on create)
+            RepositoryError: If persistence fails
+        """
+        # Check if user exists by ID
+        existing = self.find_by_id(user.id)
+        if existing is None:
+            return self.create(user)
+        else:
+            return self.update(user)

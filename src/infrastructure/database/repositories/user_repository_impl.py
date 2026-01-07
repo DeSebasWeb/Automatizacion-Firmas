@@ -4,11 +4,11 @@ import structlog
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from domain.repositories.user_repository import IUserRepository
-from domain.entities.user import User as DomainUser
-from domain.value_objects.user_id import UserId
-from domain.value_objects.email import Email
-from domain.exceptions import (
+from src.domain.repositories.user_repository import IUserRepository
+from src.domain.entities.user import User as DomainUser
+from src.domain.value_objects.user_id import UserId
+from src.domain.value_objects.email import Email
+from src.domain.exceptions.exceptions import (
     UserNotFoundError,
     DuplicateEmailError,
     RepositoryError
@@ -190,7 +190,6 @@ class UserRepository(IUserRepository):
                 logger.info("user_deleted", user_id=str(user_id))
                 return True
             else:
-                logger.debug("user_not_found_for_deletion", user_id=str(user_id))
                 return False
 
         except SQLAlchemyError as e:
@@ -211,7 +210,6 @@ class UserRepository(IUserRepository):
             exists_query = select(exists().where(DBUser.email == str(email)))
             result = self._session.execute(exists_query).scalar()
 
-            logger.debug("email_existence_check", email=str(email), exists=result)
             return result
 
         except SQLAlchemyError as e:
