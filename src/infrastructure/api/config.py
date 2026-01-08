@@ -91,16 +91,72 @@ class Settings(BaseSettings):
         default="digit_ensemble",
         description="OCR provider: google_vision, azure_vision, ensemble, digit_ensemble"
     )
-    
+
     # Google Cloud Vision
     GOOGLE_APPLICATION_CREDENTIALS: str | None = Field(
         default=None,
         description="Path to Google Cloud credentials JSON"
     )
-    
+
     # Azure Computer Vision
     AZURE_VISION_ENDPOINT: str | None = Field(default=None, description="Azure Vision endpoint")
     AZURE_VISION_KEY: str | None = Field(default=None, description="Azure Vision API key")
+
+    # =====================================================================
+    # OCR DIGIT-LEVEL ENSEMBLE CONFIGURATION
+    # =====================================================================
+    OCR_MIN_DIGIT_CONFIDENCE: float = Field(
+        default=0.58,
+        ge=0.0,
+        le=1.0,
+        description="Minimum confidence for a single digit"
+    )
+    OCR_MIN_AGREEMENT_RATIO: float = Field(
+        default=0.60,
+        ge=0.0,
+        le=1.0,
+        description="Minimum agreement ratio between OCR providers"
+    )
+    OCR_CONFIDENCE_BOOST: float = Field(
+        default=0.03,
+        ge=0.0,
+        le=0.1,
+        description="Confidence boost when OCRs agree"
+    )
+    OCR_MAX_CONFLICT_RATIO: float = Field(
+        default=0.40,
+        ge=0.0,
+        le=1.0,
+        description="Maximum ratio of conflicting digits allowed"
+    )
+    OCR_AMBIGUITY_THRESHOLD: float = Field(
+        default=0.10,
+        ge=0.0,
+        le=0.5,
+        description="Ambiguity threshold for flagging uncertain digits"
+    )
+    OCR_ALLOW_LOW_CONFIDENCE_OVERRIDE: bool = Field(
+        default=True,
+        description="Allow low-confidence override"
+    )
+    OCR_VERBOSE_LOGGING: bool = Field(
+        default=False,
+        description="Verbose logging for digit ensemble"
+    )
+
+    # Timeout settings
+    OCR_PARALLEL_TIMEOUT: int = Field(
+        default=30,
+        ge=1,
+        le=300,
+        description="Timeout for parallel OCR execution (seconds)"
+    )
+    OCR_SINGLE_TIMEOUT: int = Field(
+        default=15,
+        ge=1,
+        le=120,
+        description="Timeout for single OCR provider (seconds)"
+    )
 
     # =====================================================================
     # FILE UPLOAD
