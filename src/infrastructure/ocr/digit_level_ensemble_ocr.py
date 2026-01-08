@@ -1,5 +1,6 @@
 """Ensemble OCR con votación a nivel de dígito individual - Máxima precisión."""
 import concurrent.futures
+import structlog
 from dataclasses import dataclass
 from typing import List, Dict, Optional, Tuple
 from PIL import Image
@@ -7,12 +8,15 @@ import difflib
 
 from ...domain.entities import CedulaRecord
 from ...domain.ports import OCRPort, ConfigPort
+from ...domain.constants import DIGIT_CONFUSION_PAIRS
 from .ensemble import (
     DigitConfidenceExtractor,
     LengthValidator,
     DigitComparator,
     EnsembleStatistics
 )
+
+logger = structlog.get_logger(__name__)
 
 
 @dataclass
@@ -82,41 +86,26 @@ class DigitLevelEnsembleOCR(OCRPort):
         self.primary_ocr = primary_ocr
         self.secondary_ocr = secondary_ocr
 
-        # Configuración del ensemble
+        # Configuración del ensemble (leer desde config/env)
         self.min_digit_confidence = self.config.get('ocr.digit_ensemble.min_digit_confidence', 0.58)
         self.min_agreement_ratio = self.config.get('ocr.digit_ensemble.min_agreement_ratio', 0.60)
         self.confidence_boost = self.config.get('ocr.digit_ensemble.confidence_boost', 0.03)
         self.max_conflict_ratio = self.config.get('ocr.digit_ensemble.max_conflict_ratio', 0.40)
         self.ambiguity_threshold = self.config.get('ocr.digit_ensemble.ambiguity_threshold', 0.10)
         self.allow_low_confidence_override = self.config.get('ocr.digit_ensemble.allow_low_confidence_override', True)
-        self.verbose_logging = self.config.get('ocr.digit_ensemble.verbose_logging', True)
+        self.verbose_logging = self.config.get('ocr.digit_ensemble.verbose_logging', False)
 
-        # Matriz de confusión: pares de dígitos que frecuentemente se confunden
-        # Formato: (dígito1, dígito2) -> probabilidad de confusión
-        self.confusion_pairs = {
-            ('1', '7'): 0.15,  # 1 y 7 se confunden mucho en manuscritos
-            ('7', '1'): 0.15,
-            ('5', '6'): 0.10,  # 5 y 6 pueden confundirse
-            ('6', '5'): 0.10,
-            ('8', '3'): 0.08,  # 8 y 3 a veces se confunden
-            ('3', '8'): 0.08,
-            ('2', '7'): 0.12,  # 2 y 7 pueden ser similares
-            ('7', '2'): 0.12,
-            ('0', '6'): 0.08,  # 0 y 6 pueden confundirse
-            ('6', '0'): 0.08,
-            ('9', '4'): 0.07,  # 9 y 4 a veces se confunden
-            ('4', '9'): 0.07,
-        }
+        # Usar matriz de confusión del dominio
+        self.confusion_pairs = DIGIT_CONFUSION_PAIRS
 
-        print("\n" + "="*70)
-        print("DIGIT-LEVEL ENSEMBLE OCR INICIALIZADO")
-        print("="*70)
-        print(f"✓ Primary OCR:   {type(primary_ocr).__name__}")
-        print(f"✓ Secondary OCR: {type(secondary_ocr).__name__}")
-        print(f"✓ Min digit confidence: {self.min_digit_confidence*100:.0f}%")
-        print(f"✓ Min agreement ratio:  {self.min_agreement_ratio*100:.0f}%")
-        print(f"✓ Verbose logging: {self.verbose_logging}")
-        print("="*70 + "\n")
+        logger.info(
+            "Digit-level ensemble OCR initialized",
+            primary_ocr=type(primary_ocr).__name__,
+            secondary_ocr=type(secondary_ocr).__name__,
+            min_digit_confidence=self.min_digit_confidence,
+            min_agreement_ratio=self.min_agreement_ratio,
+            verbose_logging=self.verbose_logging
+        )
 
     def extract_cedulas(self, image: Image.Image) -> List[CedulaRecord]:
         """
@@ -141,35 +130,45 @@ class DigitLevelEnsembleOCR(OCRPort):
             Lista de CedulaRecord con máxima precisión, EN ORDEN de detección
         """
         if self.verbose_logging:
-            print("\n" + "="*70)
-            print("INICIANDO DIGIT-LEVEL ENSEMBLE OCR")
-            print("="*70)
+            # Separator line (removed for structured logging)
+            logger.info("Starting digit-level ensemble OCR")
+            # Separator line (removed for structured logging)
 
         # Paso 1: Ejecutar ambos OCR en paralelo
         primary_records, secondary_records = self._run_ocr_in_parallel(image)
 
         if not primary_records and not secondary_records:
-            print("✗ Ningún OCR detectó cédulas")
+            logger.warning("Ningún OCR detectó cédulas")
             return []
 
         if self.verbose_logging:
-            print(f"\n✓ Primary OCR encontró:   {len(primary_records)} cédulas")
-            print(f"✓ Secondary OCR encontró: {len(secondary_records)} cédulas")
+            logger.debug(
+                "OCR detection results",
+                primary_count=len(primary_records),
+                secondary_count=len(secondary_records)
+            )
 
         # Paso 2: Emparejar cédulas similares
         pairs = self._match_cedulas_by_similarity(primary_records, secondary_records)
 
         if self.verbose_logging:
-            print(f"✓ Emparejadas: {len(pairs)} cédulas\n")
+            logger.debug("Cedulas paired successfully", pairs_count=len(pairs))
 
         # Paso 3: Combinar cada par a nivel de dígito
         combined_records = []
 
         for idx, (primary, secondary) in enumerate(pairs, 1):
             if self.verbose_logging:
-                print(f"\n[{idx}/{len(pairs)}] Procesando cédula (posición {idx-1}):")
-                print(f"  Primary:   {primary.cedula.value} (conf: {primary.confidence.as_percentage():.1f}%)")
-                print(f"  Secondary: {secondary.cedula.value} (conf: {secondary.confidence.as_percentage():.1f}%)")
+                logger.debug(
+                    "Processing cedula pair",
+                    index=idx,
+                    total=len(pairs),
+                    position=idx-1,
+                    primary_value=primary.cedula.value,
+                    primary_conf=primary.confidence.as_percentage(),
+                    secondary_value=secondary.cedula.value,
+                    secondary_conf=secondary.confidence.as_percentage()
+                )
 
             # Combinar dígito por dígito
             combined = self._combine_at_digit_level(primary, secondary)
@@ -177,21 +176,30 @@ class DigitLevelEnsembleOCR(OCRPort):
             if combined:
                 combined_records.append(combined)
                 if self.verbose_logging:
-                    print(f"  → RESULTADO: {combined.cedula.value} ✅")
-                    print(f"    Confianza: {combined.confidence.as_percentage():.1f}%")
+                    logger.debug(
+                        "Cedula combined successfully",
+                        result=combined.cedula.value,
+                        confidence=combined.confidence.as_percentage()
+                    )
             else:
                 # Si la combinación falla, usar el OCR con mayor confianza individual
                 # Esto mantiene el orden en lugar de descartar la cédula
                 if primary.confidence.as_percentage() >= secondary.confidence.as_percentage():
                     combined_records.append(primary)
                     if self.verbose_logging:
-                        print(f"  ⚠️ Combinación rechazada, usando Primary: {primary.cedula.value}")
-                        print(f"    Confianza: {primary.confidence.as_percentage():.1f}%")
+                        logger.warning(
+                            "Combination rejected, using primary",
+                            value=primary.cedula.value,
+                            confidence=primary.confidence.as_percentage()
+                        )
                 else:
                     combined_records.append(secondary)
                     if self.verbose_logging:
-                        print(f"  ⚠️ Combinación rechazada, usando Secondary: {secondary.cedula.value}")
-                        print(f"    Confianza: {secondary.confidence.as_percentage():.1f}%")
+                        logger.warning(
+                            "Combination rejected, using secondary",
+                            value=secondary.cedula.value,
+                            confidence=secondary.confidence.as_percentage()
+                        )
 
         # Paso 4: Agregar cédulas que no tuvieron par SOLO si la diferencia es significativa
         # Si la diferencia entre ambos OCRs es mínima (≤2), NO agregar cédulas sin par
@@ -210,12 +218,16 @@ class DigitLevelEnsembleOCR(OCRPort):
         else:
             # Diferencia mínima: NO agregar cédulas sin par
             if self.verbose_logging:
-                print(f"  ℹ️ Diferencia mínima ({count_difference}) entre OCRs → NO se agregan cédulas sin par")
+                logger.info(
+                    "Minimal difference between OCRs, unpaired cedulas not added",
+                    count_difference=count_difference
+                )
 
         if self.verbose_logging:
-            print("\n" + "="*70)
-            print(f"RESULTADO FINAL: {len(combined_records)} cédulas extraídas con alta confianza")
-            print("="*70 + "\n")
+            logger.info(
+                "Digit-level ensemble completed",
+                total_cedulas=len(combined_records)
+            )
 
         return combined_records
 
@@ -241,10 +253,10 @@ class DigitLevelEnsembleOCR(OCRPort):
                 secondary_records = future_secondary.result(timeout=60)
                 return primary_records, secondary_records
             except concurrent.futures.TimeoutError:
-                print("ERROR: Timeout ejecutando OCR en paralelo")
+                logger.error("Timeout ejecutando OCR en paralelo")
                 return [], []
             except Exception as e:
-                print(f"ERROR ejecutando OCR en paralelo: {e}")
+                logger.error("ejecutando OCR en paralelo", error=e)
                 import traceback
                 traceback.print_exc()
                 return [], []
@@ -277,9 +289,11 @@ class DigitLevelEnsembleOCR(OCRPort):
             Lista de tuplas (primary, secondary) emparejadas
         """
         if self.verbose_logging:
-            print(f"\n{'='*70}")
-            print("EMPAREJAMIENTO HÍBRIDO (Posición + Similitud)")
-            print(f"{'='*70}")
+            logger.debug(
+                "Starting hybrid pairing strategy",
+                primary_count=len(primary_records),
+                secondary_count=len(secondary_records)
+            )
 
         pairs = []
         used_secondary = set()
@@ -305,16 +319,23 @@ class DigitLevelEnsembleOCR(OCRPort):
                     used_secondary.add(i)
 
                     if self.verbose_logging:
-                        match_symbol = "✓" if positional_similarity > 0.8 else "~" if positional_similarity > 0.5 else "⚠️"
-                        print(f"  {match_symbol} Par {len(pairs)}: "
-                              f"Primary[{i}] '{primary.cedula.value}' ↔ "
-                              f"Secondary[{i}] '{positional_match.cedula.value}' "
-                              f"(similitud: {positional_similarity*100:.1f}%) [por posición]")
+                        logger.debug(
+                            "Positional pair matched",
+                            pair_index=len(pairs),
+                            position=i,
+                            primary_value=primary.cedula.value,
+                            secondary_value=positional_match.cedula.value,
+                            similarity=positional_similarity
+                        )
                     continue
 
                 # Similitud muy baja (<30%), buscar mejor match en ventana ±2
                 if self.verbose_logging:
-                    print(f"  ⚠️ Similitud baja en posición {i} ({positional_similarity*100:.1f}%), buscando mejor match...")
+                    logger.debug(
+                        "Low similarity, searching for better match",
+                        position=i,
+                        similarity=positional_similarity
+                    )
 
             # Buscar mejor match en ventana ±2 posiciones
             best_match_idx = None
@@ -345,12 +366,16 @@ class DigitLevelEnsembleOCR(OCRPort):
                 used_secondary.add(best_match_idx)
 
                 if self.verbose_logging:
-                    match_symbol = "✓" if best_similarity > 0.8 else "~" if best_similarity > 0.5 else "⚠️"
-                    correction_note = f" [corregido: pos {i}→{best_match_idx}]" if best_match_idx != i else ""
-                    print(f"  {match_symbol} Par {len(pairs)}: "
-                          f"Primary[{i}] '{primary.cedula.value}' ↔ "
-                          f"Secondary[{best_match_idx}] '{secondary.cedula.value}' "
-                          f"(similitud: {best_similarity*100:.1f}%){correction_note}")
+                    logger.debug(
+                        "Best match found in window",
+                        pair_index=len(pairs),
+                        original_position=i,
+                        matched_position=best_match_idx,
+                        primary_value=primary.cedula.value,
+                        secondary_value=secondary.cedula.value,
+                        similarity=best_similarity,
+                        corrected=best_match_idx != i
+                    )
             elif i < len(secondary_records):
                 # No encontramos nada mejor, usar posición original de todos modos
                 positional_match = secondary_records[i]
@@ -358,29 +383,35 @@ class DigitLevelEnsembleOCR(OCRPort):
                 used_secondary.add(i)
 
                 if self.verbose_logging:
-                    print(f"  ⚠️ Par {len(pairs)}: "
-                          f"Primary[{i}] '{primary.cedula.value}' ↔ "
-                          f"Secondary[{i}] '{positional_match.cedula.value}' "
-                          f"(similitud: {positional_similarity*100:.1f}%) [forzado por posición]")
+                    logger.warning(
+                        "Forced positional pairing (low similarity)",
+                        pair_index=len(pairs),
+                        position=i,
+                        primary_value=primary.cedula.value,
+                        secondary_value=positional_match.cedula.value,
+                        similarity=positional_similarity
+                    )
 
         # Reportar cédulas sobrantes
         if len(primary_records) > min_length and self.verbose_logging:
-            print(f"\n  ℹ️ Primary OCR: {len(primary_records) - min_length} cédula(s) sin par:")
-            for i in range(min_length, len(primary_records)):
-                record = primary_records[i]
-                print(f"     Primary[{i}] '{record.cedula.value}' ({record.confidence.as_percentage():.1f}%)")
+            unpaired_primary = [
+                {"position": i, "value": primary_records[i].cedula.value,
+                 "confidence": primary_records[i].confidence.as_percentage()}
+                for i in range(min_length, len(primary_records))
+            ]
+            logger.info("Primary OCR unpaired cedulas", count=len(unpaired_primary), cedulas=unpaired_primary)
 
         unused_secondary_indices = [i for i in range(len(secondary_records)) if i not in used_secondary]
         if unused_secondary_indices and self.verbose_logging:
-            print(f"\n  ℹ️ Secondary OCR: {len(unused_secondary_indices)} cédula(s) sin par:")
-            for i in unused_secondary_indices:
-                record = secondary_records[i]
-                print(f"     Secondary[{i}] '{record.cedula.value}' ({record.confidence.as_percentage():.1f}%)")
+            unpaired_secondary = [
+                {"position": i, "value": secondary_records[i].cedula.value,
+                 "confidence": secondary_records[i].confidence.as_percentage()}
+                for i in unused_secondary_indices
+            ]
+            logger.info("Secondary OCR unpaired cedulas", count=len(unpaired_secondary), cedulas=unpaired_secondary)
 
         if self.verbose_logging:
-            print(f"\n{'='*70}")
-            print(f"RESULTADO EMPAREJAMIENTO: {len(pairs)} pares encontrados")
-            print(f"{'='*70}\n")
+            logger.info("Pairing completed", total_pairs=len(pairs))
 
         return pairs
 
@@ -428,18 +459,17 @@ class DigitLevelEnsembleOCR(OCRPort):
                 self.primary_ocr, self.secondary_ocr
             )
         except ValueError as e:
-            print(f"ERROR extrayendo confianzas por dígito: {e}")
+            logger.error("extrayendo confianzas por dígito", error=e)
             # Fallback: usar el de mayor confianza total
             return primary if primary.confidence.as_percentage() >= secondary.confidence.as_percentage() else secondary
 
         # Logging inicial
         if self.verbose_logging:
-            print(f"\n{'='*80}")
-            print("COMPARACIÓN DÍGITO POR DÍGITO")
-            print(f"{'='*80}")
-            print(f"Primary:   {primary_data.text}")
-            print(f"Secondary: {secondary_data.text}")
-            print(f"{'='*80}\n")
+            logger.debug(
+                "Starting digit-by-digit comparison",
+                primary_text=primary_data.text,
+                secondary_text=secondary_data.text
+            )
 
         # PASO 3: Comparar dígito por dígito usando DigitComparator
         comparator = DigitComparator(
@@ -503,18 +533,7 @@ class DigitLevelEnsembleOCR(OCRPort):
             confidence=avg_confidence
         )
 
-    def _print_comparison_table(self, table: List[Dict]) -> None:
-        """Imprime tabla de comparación dígito por dígito con detalles mejorados."""
-        print(f"\n{'Pos':<5} {'Primary':<15} {'Secondary':<15} {'Elegido':<15} {'Tipo':<12}")
-        print(f"{'-'*5} {'-'*15} {'-'*15} {'-'*15} {'-'*12}")
-
-        for row in table:
-            primary_str = f"'{row['primary_digit']}' ({row['primary_conf']:.1f}%)"
-            secondary_str = f"'{row['secondary_digit']}' ({row['secondary_conf']:.1f}%)"
-            chosen_str = f"'{row['chosen']}' ({row['chosen_conf']:.1f}%)"
-            type_str = row['type']
-
-            print(f"{row['pos']:<5} {primary_str:<15} {secondary_str:<15} {chosen_str:<15} {type_str:<12}")
+    # Removed _print_comparison_table - replaced with structured logging
 
     def _get_unpaired_records(
         self,
@@ -548,8 +567,11 @@ class DigitLevelEnsembleOCR(OCRPort):
                 if record.confidence.as_percentage() >= self.min_digit_confidence * 100:
                     unpaired.append(record)
                     if self.verbose_logging:
-                        print(f"  ℹ️ Agregando cédula sin par de Primary: {record.cedula.value} "
-                              f"(conf: {record.confidence.as_percentage():.1f}%)")
+                        logger.debug(
+                            "Adding unpaired primary cedula",
+                            value=record.cedula.value,
+                            confidence=record.confidence.as_percentage()
+                        )
 
         # Agregar cédulas del secondary que no fueron emparejadas
         for record in secondary_records:
@@ -557,8 +579,11 @@ class DigitLevelEnsembleOCR(OCRPort):
                 if record.confidence.as_percentage() >= self.min_digit_confidence * 100:
                     unpaired.append(record)
                     if self.verbose_logging:
-                        print(f"  ℹ️ Agregando cédula sin par de Secondary: {record.cedula.value} "
-                              f"(conf: {record.confidence.as_percentage():.1f}%)")
+                        logger.debug(
+                            "Adding unpaired secondary cedula",
+                            value=record.cedula.value,
+                            confidence=record.confidence.as_percentage()
+                        )
 
         return unpaired
 
@@ -590,28 +615,35 @@ class DigitLevelEnsembleOCR(OCRPort):
         """
         from .spatial_pairing import SpatialPairing
 
-        print("\n" + "="*80)
-        print("DUAL ENSEMBLE: Extracción de pares nombre-cédula")
-        print("="*80)
+        # Separator line (removed for structured logging)
+        logger.info("Dual ensemble: extracting name-cedula pairs")
+        # Separator line (removed for structured logging)
 
         # Ejecutar ambos OCR
         google_pairs = self.primary_ocr.extract_name_cedula_pairs(image)
         azure_pairs = self.secondary_ocr.extract_name_cedula_pairs(image)
 
-        print(f"\nPrimary:   {len(google_pairs)} pares")
-        print(f"Secondary: {len(azure_pairs)} pares")
+        logger.debug("Primary OCR pairs", count=len(google_pairs))
+        logger.debug("Secondary OCR pairs", count=len(azure_pairs))
 
         # Emparejar pares similares
         matched = SpatialPairing.match_pairs(google_pairs, azure_pairs)
-        print(f"Emparejados: {len(matched)} pares\n")
+        logger.debug("Matched pairs", count=len(matched))
 
         # Combinar información
         final_pairs = []
 
         for idx, (p_pair, s_pair) in enumerate(matched, 1):
-            print(f"[Par {idx}/{len(matched)}]")
-            print(f"  Primary:   {p_pair['nombre']} → {p_pair['cedula']}")
-            print(f"  Secondary: {s_pair['nombre']} → {s_pair['cedula']}")
+            if self.verbose_logging:
+                logger.debug(
+                    "Processing name-cedula pair",
+                    index=idx,
+                    total=len(matched),
+                    primary_name=p_pair['nombre'],
+                    primary_cedula=p_pair['cedula'],
+                    secondary_name=s_pair['nombre'],
+                    secondary_cedula=s_pair['cedula']
+                )
 
             # NOMBRE: usar el de mayor confianza
             if p_pair['confidence_nombre'] >= s_pair['confidence_nombre']:
@@ -659,9 +691,17 @@ class DigitLevelEnsembleOCR(OCRPort):
                         conf_cedula = s_pair['confidence_cedula']
                         cedula_source = 'Secondary (fallback)'
 
-            print(f"  → FINAL: {final_nombre} → {final_cedula}")
-            print(f"    Nombre de {nombre_source} (conf: {conf_nombre:.2%})")
-            print(f"    Cédula de {cedula_source} (conf: {conf_cedula:.2%})\n")
+            if self.verbose_logging:
+                logger.debug(
+                    "Final name-cedula pair",
+                    index=idx,
+                    nombre=final_nombre,
+                    cedula=final_cedula,
+                    nombre_source=nombre_source,
+                    cedula_source=cedula_source,
+                    conf_nombre=conf_nombre,
+                    conf_cedula=conf_cedula
+                )
 
             final_pairs.append({
                 'nombre': final_nombre,
@@ -670,6 +710,6 @@ class DigitLevelEnsembleOCR(OCRPort):
                 'confidence_cedula': conf_cedula
             })
 
-        print("="*80 + "\n")
+        # Separator line (removed for structured logging)
 
         return final_pairs
