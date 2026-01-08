@@ -1,12 +1,22 @@
-from .tesseract_ocr import TesseractOCR
-from .manual_ocr import ManualOCR
-
 # Base classes and utilities
 from .base_ocr_adapter import BaseOCRAdapter
 from .image_converter import ImageConverter
 
 # OCR Factory (siempre disponible)
 from .ocr_factory import create_ocr_adapter, get_available_providers, get_provider_comparison
+
+# Optional OCR providers (may have missing dependencies)
+try:
+    from .tesseract_ocr import TesseractOCR
+    TESSERACT_AVAILABLE = True
+except Exception:
+    TESSERACT_AVAILABLE = False
+
+try:
+    from .manual_ocr import ManualOCR
+    MANUAL_OCR_AVAILABLE = True
+except Exception:
+    MANUAL_OCR_AVAILABLE = False
 
 try:
     from .google_vision_adapter import GoogleVisionAdapter
@@ -45,14 +55,18 @@ except Exception:
     PADDLEOCR_AVAILABLE = False
 
 __all__ = [
-    'TesseractOCR',
-    'ManualOCR',
     'BaseOCRAdapter',
     'ImageConverter',
     'create_ocr_adapter',
     'get_available_providers',
     'get_provider_comparison',
 ]
+
+if TESSERACT_AVAILABLE:
+    __all__.append('TesseractOCR')
+
+if MANUAL_OCR_AVAILABLE:
+    __all__.append('ManualOCR')
 
 if GOOGLE_VISION_AVAILABLE:
     __all__.append('GoogleVisionAdapter')
