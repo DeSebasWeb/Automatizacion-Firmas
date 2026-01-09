@@ -1,34 +1,22 @@
 """Implementación de OCR usando Google Cloud Vision API - Óptimo para escritura manual (REFACTORIZADA)."""
-import io
+from contextlib import contextmanager
+from typing import List, Dict, Any
+import structlog
 from PIL import Image
-from typing import List, Dict
 
 try:
     from google.cloud import vision
     GOOGLE_VISION_AVAILABLE = True
 except ImportError:
     GOOGLE_VISION_AVAILABLE = False
-    print("ADVERTENCIA: Google Cloud Vision no está instalado. Instalar con: pip install google-cloud-vision")
 
 from ...domain.entities import CedulaRecord
 from ...domain.ports import ConfigPort
 from .base_ocr_adapter import BaseOCRAdapter
 from .image_converter import ImageConverter
 from .vision import GoogleSymbolExtractor, ConfidenceMapper
-from ...shared.logging import (
-    LoggerFactory,
-    log_operation,
-    log_info_message,
-    log_warning_message,
-    log_error_message,
-    log_debug_message,
-    log_api_call,
-    log_api_response,
-    log_success,
-    log_failure,
-    log_processing_step,
-    log_ocr_extraction
-)
+
+logger = structlog.get_logger(__name__)
 
 
 class GoogleVisionAdapter(BaseOCRAdapter):
@@ -64,6 +52,11 @@ class GoogleVisionAdapter(BaseOCRAdapter):
             ImportError: Si Google Cloud Vision SDK no está instalado
         """
         if not GOOGLE_VISION_AVAILABLE:
+            logger.error(
+                "google_vision_not_installed",
+                error="Google Cloud Vision SDK is not installed",
+                solution="pip install google-cloud-vision"
+            )
             raise ImportError(
                 "Google Cloud Vision no está instalado. "
                 "Instalar con: pip install google-cloud-vision"
@@ -72,15 +65,15 @@ class GoogleVisionAdapter(BaseOCRAdapter):
         # Inicializar clase base (preprocessor, config, last_raw_response)
         super().__init__(config)
 
-        # Inicializar logger
-        self.logger = LoggerFactory.get_ocr_logger("google_vision")
+        # Bind logger con contexto específico del adapter
+        self.logger = logger.bind(adapter="google_vision")
 
         self.client = None
         self._initialize_ocr()
 
     def _initialize_ocr(self) -> None:
         """Inicializa Google Cloud Vision API."""
-        self.logger.debug("Inicializando cliente Google Vision")
+        self.logger.debug("google_vision_initializing")
 
         try:
             # Intentar crear cliente con Application Default Credentials (ADC)
@@ -92,20 +85,20 @@ class GoogleVisionAdapter(BaseOCRAdapter):
             self.client = vision.ImageAnnotatorClient()
 
             self.logger.info(
-                "Google Cloud Vision inicializado correctamente",
+                "google_vision_initialized",
                 auth_method="Application Default Credentials",
                 model="optimized_for_handwriting"
             )
 
         except Exception as e:
             self.logger.error(
-                "Error al inicializar Google Cloud Vision",
+                "google_vision_initialization_failed",
                 error_type=type(e).__name__,
                 error_message=str(e),
                 solutions=[
-                    "Ejecutar: gcloud auth application-default login",
-                    "O configurar: GOOGLE_APPLICATION_CREDENTIALS con ruta a JSON",
-                    "Asegurarse de habilitar Cloud Vision API en el proyecto"
+                    "gcloud auth application-default login",
+                    "export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json",
+                    "Enable Cloud Vision API in GCP project"
                 ]
             )
             raise
@@ -158,80 +151,90 @@ class GoogleVisionAdapter(BaseOCRAdapter):
             Lista de registros de cédulas extraídas
         """
         if self.client is None:
-            self.logger.error("Google Cloud Vision no esta inicializado")
+            self.logger.error("client_not_initialized")
             return []
 
-        with log_operation(
-            self.logger,
-            "extract_cedulas",
-            image_size=f"{image.width}x{image.height}"
-        ) as op:
-            try:
-                # Preprocesar imagen usando método heredado
-                processed_image = self.preprocess_image(image)
+        operation_logger = self.logger.bind(
+            operation="extract_cedulas",
+            image_width=image.width,
+            image_height=image.height
+        )
+        operation_logger.info("extraction_started")
 
-                # Convertir imagen PIL a bytes usando ImageConverter
-                img_bytes = ImageConverter.pil_to_bytes(processed_image, format='PNG')
+        try:
+            # Preprocesar imagen usando método heredado
+            processed_image = self.preprocess_image(image)
 
-                # Llamar a la API
-                log_api_call(self.logger, "google_vision", "document_text_detection", language="es")
-                response = self._call_ocr_api(img_bytes)
+            # Convertir imagen PIL a bytes usando ImageConverter
+            img_bytes = ImageConverter.pil_to_bytes(processed_image, format='PNG')
 
-                # Guardar respuesta completa para análisis de confianza por dígito
-                self.last_raw_response = response
+            # Llamar a la API
+            operation_logger.debug("calling_api", method="document_text_detection", language="es")
+            response = self._call_ocr_api(img_bytes)
 
-                log_api_response(self.logger, "google_vision", True, api_calls=1)
+            # Guardar respuesta completa para análisis de confianza por dígito
+            self.last_raw_response = response
 
-                # Procesar respuesta - Google Vision detecta texto organizado por bloques/líneas
-                records = []
+            operation_logger.debug("api_call_successful", api_calls=1)
 
-                # Opción 1: Usar full_text_annotation para obtener todo el texto
-                if response.full_text_annotation:
-                    full_text = response.full_text_annotation.text
-                    self.logger.debug("Texto completo detectado", full_text=full_text)
+            # Procesar respuesta - Google Vision detecta texto organizado por bloques/líneas
+            records = []
 
-                    # Procesar línea por línea
-                    lines = full_text.split('\n')
-                    self.logger.debug("Lineas de texto detectadas", total_lines=len(lines))
+            # Opción 1: Usar full_text_annotation para obtener todo el texto
+            if response.full_text_annotation:
+                full_text = response.full_text_annotation.text
+                operation_logger.debug("text_detected", full_text=full_text)
 
-                    for idx, line in enumerate(lines):
-                        if not line.strip():
-                            continue
+                # Procesar línea por línea
+                lines = full_text.split('\n')
+                operation_logger.debug("lines_detected", total_lines=len(lines))
 
-                        self.logger.debug("Procesando linea", line_number=idx+1, content=line.strip())
+                for idx, line in enumerate(lines):
+                    if not line.strip():
+                        continue
 
-                        # Extraer números del texto usando método heredado
-                        numbers = self._extract_numbers_from_text(line)
+                    line_logger = operation_logger.bind(line_number=idx + 1, content=line.strip())
+                    line_logger.debug("processing_line")
 
-                        for num in numbers:
-                            # Validar longitud de cédula (3-11 dígitos)
-                            if 3 <= len(num) <= 11:
-                                # Usar factory method para crear con Value Objects
-                                record = CedulaRecord.from_primitives(
-                                    cedula=num,
-                                    confidence=95.0  # Google Vision es muy confiable
-                                )
-                                records.append(record)
-                                log_success(self.logger, "cedula_extraida", cedula=num, digits=len(num))
-                            elif len(num) < 3:
-                                log_failure(self.logger, "cedula_descartada", reason="too_short", cedula=num, length=len(num))
-                            else:
-                                log_failure(self.logger, "cedula_descartada", reason="too_long", cedula=num, length=len(num))
+                    # Extraer números del texto usando método heredado
+                    numbers = self._extract_numbers_from_text(line)
 
-                # Eliminar duplicados usando método heredado
-                unique_records = self._remove_duplicates(records)
+                    for num in numbers:
+                        # Validar longitud de cédula (3-11 dígitos)
+                        if 3 <= len(num) <= 11:
+                            # Usar factory method para crear con Value Objects
+                            record = CedulaRecord.from_primitives(
+                                cedula=num,
+                                confidence=95.0  # Google Vision es muy confiable
+                            )
+                            records.append(record)
+                            operation_logger.info("cedula_extracted", cedula=num, digits=len(num))
+                        elif len(num) < 3:
+                            operation_logger.debug("cedula_rejected_too_short", cedula=num, length=len(num))
+                        else:
+                            operation_logger.debug("cedula_rejected_too_long", cedula=num, length=len(num))
 
-                # Agregar métricas
-                op.add_metric("cedulas_extraidas", len(unique_records))
-                op.add_metric("cedulas_duplicadas", len(records) - len(unique_records))
+            # Eliminar duplicados usando método heredado
+            unique_records = self._remove_duplicates(records)
 
-                log_ocr_extraction(self.logger, "google_vision", len(unique_records))
+            # Log métricas finales
+            operation_logger.info(
+                "extraction_completed",
+                cedulas_extracted=len(unique_records),
+                cedulas_duplicated=len(records) - len(unique_records),
+                success=True
+            )
 
-                return unique_records
+            return unique_records
 
-            except Exception as e:
-                log_error_message(self.logger, "Error en extraccion de cedulas", error=e)
-                return []
+        except Exception as e:
+            operation_logger.error(
+                "extraction_failed",
+                error_type=type(e).__name__,
+                error_message=str(e),
+                exc_info=True
+            )
+            return []
 
     # MÉTODO REMOVIDO: extract_full_form_data ya no es necesario para API
     # Usaba RowData que es específico de la UI de escritorio
@@ -260,122 +263,108 @@ class GoogleVisionAdapter(BaseOCRAdapter):
             Lista de RowData (uno por renglón)
         """
         if self.client is None:
-            self.logger.error("Google Cloud Vision no esta inicializado")
+            self.logger.error("client_not_initialized")
             return []
 
-        with log_operation(
-            self.logger,
-            "extract_full_form_data",
-            image_size=f"{image.width}x{image.height}",
+        operation_logger = self.logger.bind(
+            operation="extract_full_form_data",
+            image_width=image.width,
+            image_height=image.height,
             expected_rows=expected_rows
-        ) as op:
-            try:
-                # ========== PASO 1: UNA SOLA LLAMADA API ==========
-                log_processing_step(
-                    self.logger,
-                    "Enviando imagen completa a Google Vision API",
-                    step_number=1,
-                    optimization="single_api_call"
-                )
+        )
+        operation_logger.info("form_extraction_started")
 
-                # Preprocesar imagen
-                processed_image = self.preprocess_image(image)
+        try:
+            # ========== PASO 1: UNA SOLA LLAMADA API ==========
+            operation_logger.debug("step_1_calling_api", optimization="single_api_call")
 
-                # Convertir imagen PIL a bytes
-                img_bytes = ImageConverter.pil_to_bytes(processed_image, format='PNG')
+            # Preprocesar imagen
+            processed_image = self.preprocess_image(image)
 
-                # ⚡ ÚNICA LLAMADA API - DOCUMENT_TEXT_DETECTION
-                log_api_call(self.logger, "google_vision", "document_text_detection")
-                response = self._call_ocr_api(img_bytes)
-                log_api_response(self.logger, "google_vision", True, api_calls=1, optimization="93% reduction vs before")
+            # Convertir imagen PIL a bytes
+            img_bytes = ImageConverter.pil_to_bytes(processed_image, format='PNG')
 
-                # Verificar si hay texto detectado
-                if not response.full_text_annotation or not response.full_text_annotation.text.strip():
-                    log_warning_message(self.logger, "No se detecto texto en la imagen")
-                    return [self._create_empty_row(i) for i in range(expected_rows)]
+            # ⚡ ÚNICA LLAMADA API - DOCUMENT_TEXT_DETECTION
+            operation_logger.debug("calling_api", method="document_text_detection")
+            response = self._call_ocr_api(img_bytes)
+            operation_logger.debug("api_call_successful", api_calls=1, optimization="93% reduction vs before")
 
-                # ========== PASO 2: ORGANIZAR TEXTO POR RENGLONES ==========
-                log_processing_step(
-                    self.logger,
-                    f"Organizando texto en {expected_rows} renglones",
-                    step_number=2
-                )
-
-                # Extraer todos los bloques de texto con coordenadas
-                all_blocks = self._extract_text_blocks_with_coords(response)
-                self.logger.info("Bloques de texto detectados", blocks_count=len(all_blocks))
-
-                # Dividir bloques en renglones basados en coordenada Y (método heredado)
-                rows_blocks = self._assign_blocks_to_rows(
-                    all_blocks,
-                    processed_image.height,
-                    expected_rows
-                )
-
-                # ========== PASO 3: PROCESAR CADA RENGLÓN ==========
-                log_processing_step(
-                    self.logger,
-                    f"Procesando {expected_rows} renglones",
-                    step_number=3
-                )
-
-                all_rows_data = []
-
-                for row_idx in range(expected_rows):
-                    blocks_in_row = rows_blocks.get(row_idx, [])
-
-                    if not blocks_in_row:
-                        # Renglón vacío - no hay bloques de texto
-                        row_data = self._create_empty_row(row_idx)
-                        all_rows_data.append(row_data)
-                        self.logger.debug("Renglon vacio", row_number=row_idx+1)
-                    else:
-                        # Procesar bloques del renglón usando método heredado
-                        row_data = self._process_row_blocks(
-                            blocks_in_row,
-                            row_idx,
-                            processed_image.width,
-                            column_boundary_ratio=0.6  # 60% para Google Vision
-                        )
-                        all_rows_data.append(row_data)
-
-                        # Log resultado
-                        if row_data.is_empty:
-                            self.logger.debug(
-                                "Renglon vacio por confianza baja",
-                                row_number=row_idx+1
-                            )
-                        else:
-                            self.logger.debug(
-                                "Renglon procesado",
-                                row_number=row_idx+1,
-                                nombres=row_data.nombres_manuscritos,
-                                cedula=row_data.cedula
-                            )
-
-                # Calcular métricas
-                vacios = sum(1 for r in all_rows_data if r.is_empty)
-                con_datos = len(all_rows_data) - vacios
-
-                # Agregar métricas a la operación
-                op.add_metric("renglones_totales", len(all_rows_data))
-                op.add_metric("renglones_con_datos", con_datos)
-                op.add_metric("renglones_vacios", vacios)
-                op.add_metric("api_calls", 1)
-
-                self.logger.info(
-                    "Extraccion de formulario completada",
-                    renglones_procesados=len(all_rows_data),
-                    con_datos=con_datos,
-                    vacios=vacios,
-                    api_calls=1
-                )
-
-                return all_rows_data
-
-            except Exception as e:
-                log_error_message(self.logger, "Error en extraccion de formulario", error=e)
+            # Verificar si hay texto detectado
+            if not response.full_text_annotation or not response.full_text_annotation.text.strip():
+                operation_logger.warning("no_text_detected")
                 return [self._create_empty_row(i) for i in range(expected_rows)]
+
+            # ========== PASO 2: ORGANIZAR TEXTO POR RENGLONES ==========
+            operation_logger.debug("step_2_organizing_rows", expected_rows=expected_rows)
+
+            # Extraer todos los bloques de texto con coordenadas
+            all_blocks = self._extract_text_blocks_with_coords(response)
+            operation_logger.info("text_blocks_detected", blocks_count=len(all_blocks))
+
+            # Dividir bloques en renglones basados en coordenada Y (método heredado)
+            rows_blocks = self._assign_blocks_to_rows(
+                all_blocks,
+                processed_image.height,
+                expected_rows
+            )
+
+            # ========== PASO 3: PROCESAR CADA RENGLÓN ==========
+            operation_logger.debug("step_3_processing_rows", expected_rows=expected_rows)
+
+            all_rows_data = []
+
+            for row_idx in range(expected_rows):
+                blocks_in_row = rows_blocks.get(row_idx, [])
+
+                if not blocks_in_row:
+                    # Renglón vacío - no hay bloques de texto
+                    row_data = self._create_empty_row(row_idx)
+                    all_rows_data.append(row_data)
+                    operation_logger.debug("empty_row_no_blocks", row_number=row_idx + 1)
+                else:
+                    # Procesar bloques del renglón usando método heredado
+                    row_data = self._process_row_blocks(
+                        blocks_in_row,
+                        row_idx,
+                        processed_image.width,
+                        column_boundary_ratio=0.6  # 60% para Google Vision
+                    )
+                    all_rows_data.append(row_data)
+
+                    # Log resultado
+                    if row_data.is_empty:
+                        operation_logger.debug("empty_row_low_confidence", row_number=row_idx + 1)
+                    else:
+                        operation_logger.debug(
+                            "row_processed",
+                            row_number=row_idx + 1,
+                            nombres=row_data.nombres_manuscritos,
+                            cedula=row_data.cedula
+                        )
+
+            # Calcular métricas
+            vacios = sum(1 for r in all_rows_data if r.is_empty)
+            con_datos = len(all_rows_data) - vacios
+
+            operation_logger.info(
+                "form_extraction_completed",
+                renglones_procesados=len(all_rows_data),
+                con_datos=con_datos,
+                vacios=vacios,
+                api_calls=1,
+                success=True
+            )
+
+            return all_rows_data
+
+        except Exception as e:
+            operation_logger.error(
+                "form_extraction_failed",
+                error_type=type(e).__name__,
+                error_message=str(e),
+                exc_info=True
+            )
+            return [self._create_empty_row(i) for i in range(expected_rows)]
 
     def _extract_text_blocks_with_coords(self, response) -> List[Dict]:
         """
@@ -432,7 +421,7 @@ class GoogleVisionAdapter(BaseOCRAdapter):
 
         return blocks
 
-    def get_character_confidences(self, text: str) -> Dict[str, any]:
+    def get_character_confidences(self, text: str) -> Dict[str, Any]:
         """
         Extrae la confianza individual de cada caracter en el texto detectado.
 
@@ -451,14 +440,14 @@ class GoogleVisionAdapter(BaseOCRAdapter):
         Raises:
             ValueError: Si no hay respuesta disponible (ejecuta extract_cedulas() primero)
         """
+        confidence_logger = self.logger.bind(operation="get_character_confidences", text=text)
+
         if not self.last_raw_response:
+            confidence_logger.error("no_response_available")
             raise ValueError("No hay respuesta disponible. Ejecuta extract_cedulas() primero.")
 
         if not self.last_raw_response.full_text_annotation:
-            log_warning_message(
-                self.logger,
-                "No hay full_text_annotation en respuesta de Google Vision"
-            )
+            confidence_logger.warning("no_full_text_annotation")
             # Fallback: confianza uniforme
             return {
                 'confidences': [0.85] * len(text),
@@ -471,9 +460,8 @@ class GoogleVisionAdapter(BaseOCRAdapter):
         try:
             symbols = GoogleSymbolExtractor.extract_all_symbols(self.last_raw_response)
         except ValueError as e:
-            log_warning_message(
-                self.logger,
-                "Error extrayendo simbolos",
+            confidence_logger.warning(
+                "symbol_extraction_failed",
                 error_type=type(e).__name__,
                 error_message=str(e)
             )
@@ -489,12 +477,13 @@ class GoogleVisionAdapter(BaseOCRAdapter):
 
         # PASO 3: Agregar advertencia si no se encontro
         if not result['found']:
-            log_warning_message(
-                self.logger,
-                "Texto no encontrado en respuesta",
-                text=text
-            )
+            confidence_logger.warning("text_not_found_in_response", text=text)
 
         # PASO 4: Agregar source y retornar
         result['source'] = 'google_vision'
+        confidence_logger.debug(
+            "confidences_extracted",
+            average_confidence=result.get('average', 0.0),
+            found=result.get('found', False)
+        )
         return result
