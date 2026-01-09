@@ -1,6 +1,6 @@
 """FastAPI dependencies for dependency injection."""
-from typing import Annotated
-from fastapi import Depends, HTTPException, status
+from typing import Annotated, Optional
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPBearer
 from fastapi.security.http import HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -9,12 +9,21 @@ import structlog
 
 from src.infrastructure.database.dependencies import get_db
 from src.infrastructure.database.repositories.user_repository_impl import UserRepository
+from src.infrastructure.database.repositories.api_key_repository_impl import APIKeyRepository
 from src.domain.repositories.user_repository import IUserRepository
+from src.domain.repositories.api_key_repository import IAPIKeyRepository
 from src.application.use_cases.register_user_use_case import RegisterUserUseCase
 from src.application.use_cases.authenticate_user_use_case import AuthenticateUserUseCase
 from src.application.use_cases.get_user_by_id_use_case import GetUserByIdUseCase
+from src.application.use_cases.create_api_key_use_case import CreateAPIKeyUseCase
+from src.application.use_cases.validate_api_key_use_case import ValidateAPIKeyUseCase
+from src.application.use_cases.list_api_keys_use_case import ListAPIKeysUseCase
+from src.application.use_cases.revoke_api_key_use_case import RevokeAPIKeyUseCase
+from src.application.use_cases.get_api_key_scopes_use_case import GetAPIKeyScopesUseCase
+from src.application.use_cases.validate_api_key_use_case import InvalidCredentialsError
 from src.infrastructure.security.jwt_handler import JWTHandler
 from src.domain.entities.user import User
+from src.domain.entities.api_key import APIKey
 from src.domain.exceptions.exceptions import UserNotFoundError
 
 logger = structlog.get_logger(__name__)
@@ -216,7 +225,204 @@ def get_current_user(
 
 
 # =========================================================================
+# API KEY REPOSITORY DEPENDENCIES
+# =========================================================================
+
+def get_api_key_repository(db: Session = Depends(get_db)) -> IAPIKeyRepository:
+    """
+    Get API key repository instance.
+
+    Args:
+        db: Database session from get_db dependency
+
+    Returns:
+        IAPIKeyRepository implementation
+    """
+    return APIKeyRepository(db)
+
+
+# =========================================================================
+# API KEY USE CASE DEPENDENCIES
+# =========================================================================
+
+def get_create_api_key_use_case(
+    api_key_repo: IAPIKeyRepository = Depends(get_api_key_repository)
+) -> CreateAPIKeyUseCase:
+    """
+    Get create API key use case.
+
+    Args:
+        api_key_repo: API key repository (injected)
+
+    Returns:
+        CreateAPIKeyUseCase instance
+    """
+    return CreateAPIKeyUseCase(api_key_repo)
+
+
+def get_validate_api_key_use_case(
+    api_key_repo: IAPIKeyRepository = Depends(get_api_key_repository)
+) -> ValidateAPIKeyUseCase:
+    """
+    Get validate API key use case.
+
+    Args:
+        api_key_repo: API key repository (injected)
+
+    Returns:
+        ValidateAPIKeyUseCase instance
+    """
+    return ValidateAPIKeyUseCase(api_key_repo)
+
+
+def get_list_api_keys_use_case(
+    api_key_repo: IAPIKeyRepository = Depends(get_api_key_repository)
+) -> ListAPIKeysUseCase:
+    """
+    Get list API keys use case.
+
+    Args:
+        api_key_repo: API key repository (injected)
+
+    Returns:
+        ListAPIKeysUseCase instance
+    """
+    return ListAPIKeysUseCase(api_key_repo)
+
+
+def get_revoke_api_key_use_case(
+    api_key_repo: IAPIKeyRepository = Depends(get_api_key_repository)
+) -> RevokeAPIKeyUseCase:
+    """
+    Get revoke API key use case.
+
+    Args:
+        api_key_repo: API key repository (injected)
+
+    Returns:
+        RevokeAPIKeyUseCase instance
+    """
+    return RevokeAPIKeyUseCase(api_key_repo)
+
+
+def get_api_key_scopes_use_case(
+    api_key_repo: IAPIKeyRepository = Depends(get_api_key_repository)
+) -> GetAPIKeyScopesUseCase:
+    """
+    Get API key scopes use case.
+
+    Args:
+        api_key_repo: API key repository (injected)
+
+    Returns:
+        GetAPIKeyScopesUseCase instance
+    """
+    return GetAPIKeyScopesUseCase(api_key_repo)
+
+
+# =========================================================================
+# API KEY AUTHENTICATION DEPENDENCIES
+# =========================================================================
+
+async def get_api_key_from_header(
+    x_api_key: Optional[str] = Header(None, description="API Key for authentication"),
+    use_case: ValidateAPIKeyUseCase = Depends(get_validate_api_key_use_case),
+) -> APIKey:
+    """
+    Validate API key from X-API-Key header.
+
+    Alternative authentication to JWT for programmatic access.
+
+    Args:
+        x_api_key: API key from X-API-Key header
+        use_case: ValidateAPIKeyUseCase dependency
+
+    Returns:
+        Valid APIKey entity
+
+    Raises:
+        HTTPException 401: If API key is missing or invalid
+
+    Usage:
+        @router.get("/protected")
+        async def protected_endpoint(
+            api_key: APIKey = Depends(get_api_key_from_header)
+        ):
+            user_id = api_key.user_id
+            ...
+
+    Example Request:
+        curl -H "X-API-Key: vfy_abc123..." http://localhost:8000/api/v1/documents
+    """
+    if not x_api_key:
+        logger.warning("API key authentication attempted but no key provided")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="API key required",
+            headers={"WWW-Authenticate": "ApiKey"},
+        )
+
+    try:
+        # Validate key (no scope checking - done by require_scope)
+        api_key = use_case.validate_without_scopes(x_api_key)
+        return api_key
+
+    except InvalidCredentialsError as e:
+        logger.warning("Invalid API key provided", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+            headers={"WWW-Authenticate": "ApiKey"},
+        )
+
+
+async def get_optional_api_key(
+    x_api_key: Optional[str] = Header(None),
+    use_case: ValidateAPIKeyUseCase = Depends(get_validate_api_key_use_case),
+) -> Optional[APIKey]:
+    """
+    Optional API key authentication.
+
+    Returns APIKey if valid key provided, None otherwise.
+    Does NOT raise exception if key is missing.
+
+    Use for endpoints that support both authenticated and anonymous access.
+
+    Args:
+        x_api_key: Optional API key from header
+        use_case: ValidateAPIKeyUseCase dependency
+
+    Returns:
+        APIKey if valid key provided, None otherwise
+
+    Usage:
+        @router.get("/public-or-private")
+        async def flexible_endpoint(
+            api_key: Optional[APIKey] = Depends(get_optional_api_key)
+        ):
+            if api_key:
+                # Authenticated - full data
+                ...
+            else:
+                # Anonymous - limited data
+                ...
+    """
+    if not x_api_key:
+        return None
+
+    try:
+        api_key = use_case.validate_without_scopes(x_api_key)
+        return api_key
+    except InvalidCredentialsError:
+        # Invalid key provided - treat as anonymous
+        logger.debug("Invalid API key provided, treating as anonymous")
+        return None
+
+
+# =========================================================================
 # TYPE ALIASES FOR CLEANER ENDPOINT SIGNATURES
 # =========================================================================
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+CurrentAPIKey = Annotated[APIKey, Depends(get_api_key_from_header)]
+OptionalAPIKey = Annotated[Optional[APIKey], Depends(get_optional_api_key)]
