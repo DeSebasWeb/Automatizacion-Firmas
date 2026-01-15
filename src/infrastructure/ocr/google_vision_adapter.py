@@ -1,5 +1,4 @@
 """Implementación de OCR usando Google Cloud Vision API - Óptimo para escritura manual (REFACTORIZADA)."""
-from contextlib import contextmanager
 from typing import List, Dict, Any
 import structlog
 from PIL import Image
@@ -103,7 +102,7 @@ class GoogleVisionAdapter(BaseOCRAdapter):
             )
             raise
 
-    def _call_ocr_api(self, image_bytes: bytes) -> any:
+    def _call_ocr_api(self, image_bytes: bytes) -> Any:
         """
         Realiza la llamada a Google Vision API.
 
