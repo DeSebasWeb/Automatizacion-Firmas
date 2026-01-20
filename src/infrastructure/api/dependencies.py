@@ -29,6 +29,8 @@ from src.application.use_cases.list_document_types_use_case import ListDocumentT
 from src.application.use_cases.get_document_type_use_case import GetDocumentTypeUseCase
 from src.application.use_cases.list_permission_types_use_case import ListPermissionTypesUseCase
 from src.application.use_cases.list_available_scopes_use_case import ListAvailableScopesUseCase
+from src.application.use_cases.process_document_use_case import ProcessDocumentUseCase
+from src.application.factories.document_processor_factory import DocumentProcessorFactory
 from src.infrastructure.security.jwt_handler import JWTHandler
 from src.domain.entities.user import User
 from src.domain.entities.api_key import APIKey
@@ -480,3 +482,33 @@ def get_list_available_scopes_use_case(
 ) -> ListAvailableScopesUseCase:
     """Get list available scopes use case."""
     return ListAvailableScopesUseCase(perm_type_repo)
+
+
+# =========================================================================
+# DOCUMENT PROCESSING DEPENDENCIES
+# =========================================================================
+
+def get_document_processor_factory() -> DocumentProcessorFactory:
+    """
+    Get document processor factory.
+
+    Note: OCR provider initialization will be handled by factory.
+    For now, we'll need to pass a mock or actual OCR provider.
+    """
+    # TODO: Properly initialize OCR provider from config
+    # For now, this is a placeholder that will need proper DI
+    from src.infrastructure.ocr.ocr_factory import OCRFactory
+    from src.shared.config.yaml_config import YAMLConfig
+
+    config = YAMLConfig("config/settings.yaml")
+    ocr_provider = OCRFactory.create(config)
+
+    return DocumentProcessorFactory(ocr_provider)
+
+
+def get_process_document_use_case(
+    processor_factory: DocumentProcessorFactory = Depends(get_document_processor_factory),
+    doc_type_repo: IDocumentTypeRepository = Depends(get_document_type_repository)
+) -> ProcessDocumentUseCase:
+    """Get process document use case."""
+    return ProcessDocumentUseCase(processor_factory, doc_type_repo)

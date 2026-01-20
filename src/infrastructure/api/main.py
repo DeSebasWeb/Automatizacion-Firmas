@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .routes import health, auth, api_keys, catalogs
+from .routes import health, auth, api_keys, catalogs, documents
 from ..database.session import init_db, close_db
 
 
@@ -49,6 +49,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router, prefix="/api/v1")
     app.include_router(api_keys.router, prefix="/api/v1")
     app.include_router(catalogs.router, prefix="/api/v1")
+    app.include_router(documents.router, prefix="/api/v1")
 
     return app
 
