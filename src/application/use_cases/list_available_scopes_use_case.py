@@ -1,10 +1,7 @@
 """List available scopes use case."""
-import structlog
 from typing import List, Optional
 
 from src.domain.repositories.permission_type_repository import IPermissionTypeRepository
-
-logger = structlog.get_logger(__name__)
 
 
 class ListAvailableScopesUseCase:
@@ -33,8 +30,6 @@ class ListAvailableScopesUseCase:
             List of scope dictionaries
         """
         if document_type_code:
-            logger.info("listing_scopes_by_document_type", document_type=document_type_code)
             return self._permission_type_repo.list_scopes_by_document_type(document_type_code)
         else:
-            logger.info("listing_all_scopes")
             return self._permission_type_repo.list_all_scopes(active_only=active_only)

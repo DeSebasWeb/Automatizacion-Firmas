@@ -1,7 +1,6 @@
 """Catalog endpoints (Document Types, Permission Types, Scopes)."""
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import List, Optional
-import structlog
 
 from src.infrastructure.api.schemas.catalog_schemas import (
     DocumentTypeResponse,
@@ -19,7 +18,6 @@ from src.infrastructure.api.dependencies import (
     get_list_available_scopes_use_case
 )
 
-logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/catalogs", tags=["Catalogs"])
 
 
@@ -36,10 +34,7 @@ async def list_document_types(
     - e14: E-14 Electoral
     - generic_text: OCR genérico
     """
-    logger.info("list_document_types_endpoint_called", active_only=active_only)
-
     document_types = use_case.execute(active_only=active_only)
-
     return [DocumentTypeResponse(**dt.to_dict()) for dt in document_types]
 
 
@@ -53,8 +48,6 @@ async def get_document_type(
 
     Example codes: 'cedula_form', 'e14', 'generic_text'
     """
-    logger.info("get_document_type_endpoint_called", code=code)
-
     document_type = use_case.execute(code)
 
     if not document_type:
@@ -82,10 +75,7 @@ async def list_permission_types(
     - export: Exportar
     - admin: Administrar
     """
-    logger.info("list_permission_types_endpoint_called")
-
     permission_types = use_case.execute(active_only=active_only)
-
     return [PermissionTypeResponse(**pt) for pt in permission_types]
 
 
@@ -109,11 +99,8 @@ async def list_available_scopes(
     - document_type: Filter scopes by document type (e.g., 'cedula_form')
     - active_only: Return only active scopes
     """
-    logger.info("list_scopes_endpoint_called", document_type=document_type)
-
     scopes = use_case.execute(
         document_type_code=document_type,
         active_only=active_only
     )
-
     return [ScopeResponse(**scope) for scope in scopes]

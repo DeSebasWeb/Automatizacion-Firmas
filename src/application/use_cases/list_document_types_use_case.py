@@ -1,11 +1,8 @@
 """List document types use case."""
-import structlog
 from typing import List
 
 from src.domain.repositories.document_type_repository import IDocumentTypeRepository
 from src.domain.entities.document_type import DocumentType
-
-logger = structlog.get_logger(__name__)
 
 
 class ListDocumentTypesUseCase:
@@ -35,10 +32,4 @@ class ListDocumentTypesUseCase:
         Returns:
             List of document type entities
         """
-        logger.info("listing_document_types", active_only=active_only)
-
-        document_types = self._document_type_repo.list_all(active_only=active_only)
-
-        logger.info("document_types_listed", count=len(document_types))
-
-        return document_types
+        return self._document_type_repo.list_all(active_only=active_only)

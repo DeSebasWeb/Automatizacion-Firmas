@@ -1,12 +1,8 @@
 """Get document type by code use case."""
-import structlog
 from typing import Optional
 
 from src.domain.repositories.document_type_repository import IDocumentTypeRepository
 from src.domain.entities.document_type import DocumentType
-from src.domain.exceptions.exceptions import RepositoryError
-
-logger = structlog.get_logger(__name__)
 
 
 class GetDocumentTypeUseCase:
@@ -32,13 +28,4 @@ class GetDocumentTypeUseCase:
         Raises:
             RepositoryError: If query fails
         """
-        logger.info("getting_document_type", code=code)
-
-        document_type = self._document_type_repo.find_by_code(code)
-
-        if document_type:
-            logger.info("document_type_found", code=code)
-        else:
-            logger.warning("document_type_not_found", code=code)
-
-        return document_type
+        return self._document_type_repo.find_by_code(code)

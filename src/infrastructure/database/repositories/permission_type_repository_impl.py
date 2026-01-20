@@ -29,12 +29,10 @@ class PermissionTypeRepository(IPermissionTypeRepository):
 
             db_perm_types = query.order_by(DBPermissionType.code).all()
 
-            logger.debug("permission_types_listed", count=len(db_perm_types))
-
             return [self._to_dict(pt) for pt in db_perm_types]
 
         except SQLAlchemyError as e:
-            logger.error("list_permission_types_failed", error=str(e))
+            logger.error("repository_query_failed", operation="list_permission_types", error=str(e))
             raise RepositoryError(f"Failed to list permission types: {e}") from e
 
     def find_by_code(self, code: str) -> Optional[dict]:
@@ -47,7 +45,7 @@ class PermissionTypeRepository(IPermissionTypeRepository):
             return self._to_dict(db_perm_type) if db_perm_type else None
 
         except SQLAlchemyError as e:
-            logger.error("find_permission_type_failed", code=code, error=str(e))
+            logger.error("repository_query_failed", operation="find_permission_type", code=code, error=str(e))
             raise RepositoryError(f"Failed to find permission type: {e}") from e
 
     def list_scopes_by_document_type(self, document_type_code: str) -> List[dict]:
@@ -61,14 +59,10 @@ class PermissionTypeRepository(IPermissionTypeRepository):
                 DBAPIPermissionScope.is_active == True
             ).all()
 
-            logger.debug("scopes_listed_by_document_type",
-                        document_type=document_type_code,
-                        count=len(scopes))
-
             return [self._scope_to_dict(scope) for scope in scopes]
 
         except SQLAlchemyError as e:
-            logger.error("list_scopes_failed", document_type=document_type_code, error=str(e))
+            logger.error("repository_query_failed", operation="list_scopes_by_document_type", document_type=document_type_code, error=str(e))
             raise RepositoryError(f"Failed to list scopes: {e}") from e
 
     def list_all_scopes(self, active_only: bool = True) -> List[dict]:
@@ -81,12 +75,10 @@ class PermissionTypeRepository(IPermissionTypeRepository):
 
             scopes = query.order_by(DBAPIPermissionScope.code).all()
 
-            logger.debug("all_scopes_listed", count=len(scopes))
-
             return [self._scope_to_dict(scope) for scope in scopes]
 
         except SQLAlchemyError as e:
-            logger.error("list_all_scopes_failed", error=str(e))
+            logger.error("repository_query_failed", operation="list_all_scopes", error=str(e))
             raise RepositoryError(f"Failed to list scopes: {e}") from e
 
     @staticmethod

@@ -28,12 +28,10 @@ class DocumentTypeRepository(IDocumentTypeRepository):
 
             db_doc_types = query.order_by(DBDocumentType.category, DBDocumentType.code).all()
 
-            logger.debug("document_types_listed", count=len(db_doc_types), active_only=active_only)
-
             return [self._to_domain(dt) for dt in db_doc_types]
 
         except SQLAlchemyError as e:
-            logger.error("list_document_types_failed", error=str(e))
+            logger.error("repository_query_failed", operation="list_document_types", error=str(e))
             raise RepositoryError(f"Failed to list document types: {e}") from e
 
     def find_by_code(self, code: str) -> Optional[DomainDocumentType]:
@@ -43,15 +41,10 @@ class DocumentTypeRepository(IDocumentTypeRepository):
                 DBDocumentType.code == code
             ).first()
 
-            if db_doc_type is None:
-                logger.debug("document_type_not_found", code=code)
-                return None
-
-            logger.debug("document_type_found", code=code)
-            return self._to_domain(db_doc_type)
+            return self._to_domain(db_doc_type) if db_doc_type else None
 
         except SQLAlchemyError as e:
-            logger.error("find_document_type_failed", code=code, error=str(e))
+            logger.error("repository_query_failed", operation="find_document_type", code=code, error=str(e))
             raise RepositoryError(f"Failed to find document type: {e}") from e
 
     def find_by_id(self, document_type_id: int) -> Optional[DomainDocumentType]:
@@ -64,7 +57,7 @@ class DocumentTypeRepository(IDocumentTypeRepository):
             return self._to_domain(db_doc_type) if db_doc_type else None
 
         except SQLAlchemyError as e:
-            logger.error("find_document_type_by_id_failed", id=document_type_id, error=str(e))
+            logger.error("repository_query_failed", operation="find_document_type_by_id", id=document_type_id, error=str(e))
             raise RepositoryError(f"Failed to find document type: {e}") from e
 
     def exists_by_code(self, code: str) -> bool:
@@ -74,11 +67,10 @@ class DocumentTypeRepository(IDocumentTypeRepository):
                 DBDocumentType.code == code
             ).first() is not None
 
-            logger.debug("document_type_exists_check", code=code, exists=exists)
             return exists
 
         except SQLAlchemyError as e:
-            logger.error("exists_check_failed", code=code, error=str(e))
+            logger.error("repository_query_failed", operation="exists_check", code=code, error=str(e))
             raise RepositoryError(f"Failed to check existence: {e}") from e
 
     @staticmethod

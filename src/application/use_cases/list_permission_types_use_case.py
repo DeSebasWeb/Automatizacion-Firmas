@@ -1,10 +1,7 @@
 """List permission types use case."""
-import structlog
 from typing import List
 
 from src.domain.repositories.permission_type_repository import IPermissionTypeRepository
-
-logger = structlog.get_logger(__name__)
 
 
 class ListPermissionTypesUseCase:
@@ -23,10 +20,4 @@ class ListPermissionTypesUseCase:
         Returns:
             List of permission type dictionaries
         """
-        logger.info("listing_permission_types")
-
-        permission_types = self._permission_type_repo.list_all(active_only=active_only)
-
-        logger.info("permission_types_listed", count=len(permission_types))
-
-        return permission_types
+        return self._permission_type_repo.list_all(active_only=active_only)
