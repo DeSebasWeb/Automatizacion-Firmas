@@ -420,6 +420,46 @@ class GoogleVisionAdapter(BaseOCRAdapter):
 
         return blocks
 
+    def extract_full_text(self, image: Image.Image) -> str:
+        """
+        Extract full text from image (for E-14 documents, etc.).
+
+        Args:
+            image: PIL Image to process
+
+        Returns:
+            Full extracted text
+        """
+        if self.client is None:
+            self.logger.error("client_not_initialized")
+            return ""
+
+        try:
+            # Preprocess image
+            processed_image = self.preprocess_image(image)
+
+            # Convert to bytes
+            img_bytes = ImageConverter.pil_to_bytes(processed_image, format='PNG')
+
+            # Call API
+            response = self._call_ocr_api(img_bytes)
+
+            # Extract full text
+            if response.full_text_annotation:
+                full_text = response.full_text_annotation.text
+                self.logger.debug("full_text_extracted", length=len(full_text))
+                return full_text
+
+            return ""
+
+        except Exception as e:
+            self.logger.error(
+                "full_text_extraction_failed",
+                error_type=type(e).__name__,
+                error_message=str(e)
+            )
+            return ""
+
     def get_character_confidences(self, text: str) -> Dict[str, Any]:
         """
         Extrae la confianza individual de cada caracter en el texto detectado.
