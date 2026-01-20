@@ -10,8 +10,12 @@ import structlog
 from src.infrastructure.database.dependencies import get_db
 from src.infrastructure.database.repositories.user_repository_impl import UserRepository
 from src.infrastructure.database.repositories.api_key_repository_impl import APIKeyRepository
+from src.infrastructure.database.repositories.document_type_repository_impl import DocumentTypeRepository
+from src.infrastructure.database.repositories.permission_type_repository_impl import PermissionTypeRepository
 from src.domain.repositories.user_repository import IUserRepository
 from src.domain.repositories.api_key_repository import IAPIKeyRepository
+from src.domain.repositories.document_type_repository import IDocumentTypeRepository
+from src.domain.repositories.permission_type_repository import IPermissionTypeRepository
 from src.application.use_cases.register_user_use_case import RegisterUserUseCase
 from src.application.use_cases.authenticate_user_use_case import AuthenticateUserUseCase
 from src.application.use_cases.get_user_by_id_use_case import GetUserByIdUseCase
@@ -21,6 +25,10 @@ from src.application.use_cases.list_api_keys_use_case import ListAPIKeysUseCase
 from src.application.use_cases.revoke_api_key_use_case import RevokeAPIKeyUseCase
 from src.application.use_cases.get_api_key_scopes_use_case import GetAPIKeyScopesUseCase
 from src.application.use_cases.validate_api_key_use_case import InvalidCredentialsError
+from src.application.use_cases.list_document_types_use_case import ListDocumentTypesUseCase
+from src.application.use_cases.get_document_type_use_case import GetDocumentTypeUseCase
+from src.application.use_cases.list_permission_types_use_case import ListPermissionTypesUseCase
+from src.application.use_cases.list_available_scopes_use_case import ListAvailableScopesUseCase
 from src.infrastructure.security.jwt_handler import JWTHandler
 from src.domain.entities.user import User
 from src.domain.entities.api_key import APIKey
@@ -426,3 +434,49 @@ async def get_optional_api_key(
 CurrentUser = Annotated[User, Depends(get_current_user)]
 CurrentAPIKey = Annotated[APIKey, Depends(get_api_key_from_header)]
 OptionalAPIKey = Annotated[Optional[APIKey], Depends(get_optional_api_key)]
+
+
+# =========================================================================
+# CATALOG REPOSITORY DEPENDENCIES
+# =========================================================================
+
+def get_document_type_repository(db: Session = Depends(get_db)) -> IDocumentTypeRepository:
+    """Get document type repository instance."""
+    return DocumentTypeRepository(db)
+
+
+def get_permission_type_repository(db: Session = Depends(get_db)) -> IPermissionTypeRepository:
+    """Get permission type repository instance."""
+    return PermissionTypeRepository(db)
+
+
+# =========================================================================
+# CATALOG USE CASE DEPENDENCIES
+# =========================================================================
+
+def get_list_document_types_use_case(
+    doc_type_repo: IDocumentTypeRepository = Depends(get_document_type_repository)
+) -> ListDocumentTypesUseCase:
+    """Get list document types use case."""
+    return ListDocumentTypesUseCase(doc_type_repo)
+
+
+def get_get_document_type_use_case(
+    doc_type_repo: IDocumentTypeRepository = Depends(get_document_type_repository)
+) -> GetDocumentTypeUseCase:
+    """Get document type use case."""
+    return GetDocumentTypeUseCase(doc_type_repo)
+
+
+def get_list_permission_types_use_case(
+    perm_type_repo: IPermissionTypeRepository = Depends(get_permission_type_repository)
+) -> ListPermissionTypesUseCase:
+    """Get list permission types use case."""
+    return ListPermissionTypesUseCase(perm_type_repo)
+
+
+def get_list_available_scopes_use_case(
+    perm_type_repo: IPermissionTypeRepository = Depends(get_permission_type_repository)
+) -> ListAvailableScopesUseCase:
+    """Get list available scopes use case."""
+    return ListAvailableScopesUseCase(perm_type_repo)
