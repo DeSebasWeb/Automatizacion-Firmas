@@ -74,7 +74,7 @@ ocr:
   language: spa
   min_confidence: 85.0
   paddle_lang: es
-  provider: digit_ensemble
+  provider: google_vision
   psm: 6
   tesseract:
     field_regions:

@@ -7,9 +7,8 @@ from src.domain.ports.ocr_port import OCRPort
 from src.application.services.e14_processor import E14Processor
 from src.infrastructure.ocr.pdf_processor import PDFProcessor
 from src.application.services.e14_parser import E14Parser
-from src.shared.logging import LoggerFactory
 
-logger = LoggerFactory.get_application_logger("document_processor_factory")
+logger = structlog.get_logger(__name__)
 
 
 class DocumentProcessorFactory:

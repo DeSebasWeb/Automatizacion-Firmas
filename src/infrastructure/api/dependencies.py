@@ -492,16 +492,16 @@ def get_document_processor_factory() -> DocumentProcessorFactory:
     """
     Get document processor factory.
 
-    Note: OCR provider initialization will be handled by factory.
-    For now, we'll need to pass a mock or actual OCR provider.
+    Initializes OCR provider from config and creates factory.
     """
-    # TODO: Properly initialize OCR provider from config
-    # For now, this is a placeholder that will need proper DI
-    from src.infrastructure.ocr.ocr_factory import OCRFactory
+    from src.infrastructure.ocr.ocr_factory import create_ocr_adapter
     from src.shared.config.yaml_config import YAMLConfig
 
     config = YAMLConfig("config/settings.yaml")
-    ocr_provider = OCRFactory.create(config)
+    ocr_provider = create_ocr_adapter(config)
+
+    if ocr_provider is None:
+        raise RuntimeError("Failed to initialize OCR provider")
 
     return DocumentProcessorFactory(ocr_provider)
 

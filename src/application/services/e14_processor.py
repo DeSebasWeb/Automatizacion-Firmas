@@ -8,9 +8,8 @@ from src.domain.ports.document_processor_port import IDocumentProcessor
 from src.domain.ports.ocr_port import OCRPort
 from src.infrastructure.ocr.pdf_processor import PDFProcessor
 from src.application.services.e14_parser import E14Parser
-from src.shared.logging import LoggerFactory
 
-logger = LoggerFactory.get_application_logger("e14_processor")
+logger = structlog.get_logger(__name__)
 
 
 class E14Processor(IDocumentProcessor):
@@ -199,7 +198,7 @@ class E14Processor(IDocumentProcessor):
             partido_data = {
                 'numero_lista': numero_lista,
                 'nombre_partido': partido_info['nombre_partido'],
-                'tipo_voto': self.parser.extract_tipo_voto(text, numero_lista),
+                'tipo_voto': partido_info['tipo_voto'],  # Already extracted in extract_partidos
                 'votos_agrupacion': self.parser.extract_votos_agrupacion(text, numero_lista),
                 'candidatos': self.parser.extract_candidatos(text, numero_lista),
                 'total': self.parser.extract_total_partido(text, numero_lista)
