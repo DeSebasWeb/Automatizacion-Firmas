@@ -30,6 +30,7 @@ from src.application.use_cases.get_document_type_use_case import GetDocumentType
 from src.application.use_cases.list_permission_types_use_case import ListPermissionTypesUseCase
 from src.application.use_cases.list_available_scopes_use_case import ListAvailableScopesUseCase
 from src.application.use_cases.process_document_use_case import ProcessDocumentUseCase
+from src.application.use_cases.process_e14_textract_use_case import ProcessE14TextractUseCase
 from src.application.factories.document_processor_factory import DocumentProcessorFactory
 from src.infrastructure.security.jwt_handler import JWTHandler
 from src.domain.entities.user import User
@@ -512,3 +513,21 @@ def get_process_document_use_case(
 ) -> ProcessDocumentUseCase:
     """Get process document use case."""
     return ProcessDocumentUseCase(processor_factory, doc_type_repo)
+
+
+def get_process_e14_textract_use_case() -> ProcessE14TextractUseCase:
+    """
+    Get process E-14 with Textract use case.
+
+    Creates AWS Textract adapter and returns use case for E-14 processing.
+    """
+    from src.infrastructure.ocr.textract.textract_adapter import TextractAdapter
+    from src.shared.config.yaml_config import YAMLConfig
+
+    config = YAMLConfig("config/settings.yaml")
+    textract_adapter = TextractAdapter(config)
+
+    if not textract_adapter.is_available():
+        raise RuntimeError("Failed to initialize AWS Textract adapter")
+
+    return ProcessE14TextractUseCase(textract_adapter)
