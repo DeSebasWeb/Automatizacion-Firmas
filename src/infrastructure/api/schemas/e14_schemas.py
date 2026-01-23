@@ -1,6 +1,6 @@
 """E-14 electoral document schemas (DTOs)."""
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Any, Dict
 from datetime import datetime
 
 
@@ -101,5 +101,115 @@ class E14ProcessResult(BaseModel):
                     "votos_nulos": 3,
                     "votos_no_marcados": 1
                 }
+            }
+        }
+
+
+# ===== TEXTRACT SCHEMAS =====
+
+
+class CandidatoTextract(BaseModel):
+    """Candidato extraído por Textract."""
+    idcandidato: str = Field(description="ID del candidato (3 dígitos: 101-999)")
+    votos: str = Field(description="Votos recibidos (puede contener símbolos)")
+    necesita_auditoria: bool = Field(description="True si contiene símbolos no numéricos")
+
+
+class PartidoTextract(BaseModel):
+    """Partido extraído por Textract."""
+    numPartido: str = Field(description="Número de partido (formato 0XXX)")
+    nombrePartido: str = Field(description="Nombre del partido en mayúsculas")
+    tipoDeVoto: str = Field(description="ListaConVotoPreferente o ListaSinVotoPreferente")
+    id: str = Field(default="0", description="ID del partido (siempre '0')")
+    votosSoloPorLaAgrupacionPolitica: str = Field(
+        description="Votos solo por la agrupación (puede contener símbolos)"
+    )
+    candidatos: List[CandidatoTextract] = Field(
+        default_factory=list,
+        description="Lista de candidatos (solo si tiene voto preferente)"
+    )
+    TotalVotosAgrupacion_VotosCandidatos: str = Field(
+        alias="TotalVotosAgrupacion+VotosCandidatos",
+        description="Total de votos del partido (puede contener símbolos)"
+    )
+    necesita_auditoria: bool = Field(description="True si algún campo necesita revisión manual")
+
+    class Config:
+        populate_by_name = True
+
+
+class DivipolTextract(BaseModel):
+    """DIVIPOL extraído por Textract."""
+    CodDep: str = Field(default="", description="Código de departamento")
+    CodMun: str = Field(default="", description="Código de municipio")
+    zona: str = Field(default="", description="Zona electoral")
+    Puesto: str = Field(default="", description="Número de puesto")
+    Mesa: str = Field(default="", description="Número de mesa")
+
+
+class E14DataTextract(BaseModel):
+    """Datos completos de E-14 extraídos por Textract."""
+    pagina: str = Field(description="Número de página (formato: '01 de 09')")
+    divipol: DivipolTextract
+    TotalSufragantesE14: str = Field(default="", description="Total de sufragantes")
+    TotalVotosEnUrna: str = Field(default="", description="Total de votos en urna")
+    TotalIncinerados: str = Field(default="***", description="Total incinerados (puede ser símbolos)")
+    Partido: List[PartidoTextract] = Field(default_factory=list, description="Lista de partidos")
+
+
+class E14TextractResponse(BaseModel):
+    """Respuesta completa del procesamiento con Textract."""
+    success: bool = Field(description="True si el procesamiento fue exitoso")
+    structured_data: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Datos estructurados en formato JSON (contiene clave 'e14')"
+    )
+    raw_ocr_text: str = Field(description="Texto completo extraído por AWS Textract")
+    warnings: List[str] = Field(
+        default_factory=list,
+        description="Lista de advertencias y campos que necesitan auditoría"
+    )
+    processing_time_ms: int = Field(description="Tiempo de procesamiento en milisegundos")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "structured_data": {
+                    "e14": {
+                        "pagina": "01 de 09",
+                        "divipol": {
+                            "CodDep": "16",
+                            "CodMun": "001",
+                            "zona": "01",
+                            "Puesto": "01",
+                            "Mesa": "001"
+                        },
+                        "TotalSufragantesE14": "134",
+                        "TotalVotosEnUrna": "131",
+                        "TotalIncinerados": "***",
+                        "Partido": [
+                            {
+                                "numPartido": "0261",
+                                "nombrePartido": "COALICION CENTRO ESPERANZA",
+                                "tipoDeVoto": "ListaConVotoPreferente",
+                                "id": "0",
+                                "votosSoloPorLaAgrupacionPolitica": "1",
+                                "candidatos": [
+                                    {
+                                        "idcandidato": "101",
+                                        "votos": "2",
+                                        "necesita_auditoria": False
+                                    }
+                                ],
+                                "TotalVotosAgrupacion+VotosCandidatos": "4",
+                                "necesita_auditoria": False
+                            }
+                        ]
+                    }
+                },
+                "raw_ocr_text": "FORMATO E-14\nPAGINA 01 de 09\nZONA: 01\nPUESTO: 01\nMESA: 001\n...",
+                "warnings": [],
+                "processing_time_ms": 1234
             }
         }
