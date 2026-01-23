@@ -21,6 +21,10 @@ wheels/
 .installed.cfg
 *.egg
 .env
+/config/settings.yaml
+
+#temporal 
+/data
 
 # Virtual Environment
 venv/
