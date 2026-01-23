@@ -31,7 +31,7 @@ image_preprocessing:
     template_window_size: 7
   deskew:
     enabled: false
-  enabled: true
+  enabled: false
   enhance_edges:
     enabled: false
   morphology:
@@ -105,3 +105,12 @@ ui:
   theme: light
   window_height: 700
   window_width: 900
+
+# AWS Configuration
+aws:
+  region: us-east-1
+  # Credentials (optional - if not provided, uses default credentials chain)
+  # Boto3 credentials chain: env vars → ~/.aws/credentials → IAM role
+  # Dejar vacío para usar credenciales por defecto
+  access_key_id: ""
+  secret_access_key: ""
