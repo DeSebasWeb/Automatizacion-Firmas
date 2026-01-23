@@ -19,6 +19,11 @@ google-cloud-vision>=3.11.0
 # Versión 1.0.0: GA release, Image Analysis 4.0 API con mejor OCR
 azure-ai-vision-imageanalysis>=1.0.0
 
+# AWS Textract - OCR para documentos E-14
+# Versión 1.35.0+: Soporte completo para Textract document analysis
+boto3>=1.35.0            # AWS SDK for Python (incluye Textract)
+botocore>=1.35.0         # Low-level AWS service access
+
 # Procesamiento de imágenes
 opencv-python>=4.9.0.80  # CRÍTICO: Preprocesamiento avanzado de imágenes
 Pillow>=10.3.0           # Manipulación de imágenes
