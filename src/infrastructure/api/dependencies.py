@@ -31,6 +31,7 @@ from src.application.use_cases.list_permission_types_use_case import ListPermiss
 from src.application.use_cases.list_available_scopes_use_case import ListAvailableScopesUseCase
 from src.application.use_cases.process_document_use_case import ProcessDocumentUseCase
 from src.application.use_cases.process_e14_textract_use_case import ProcessE14TextractUseCase
+from src.application.use_cases.process_e14_textract_queries_use_case import ProcessE14TextractQueriesUseCase
 from src.application.factories.document_processor_factory import DocumentProcessorFactory
 from src.infrastructure.security.jwt_handler import JWTHandler
 from src.domain.entities.user import User
@@ -531,3 +532,57 @@ def get_process_e14_textract_use_case() -> ProcessE14TextractUseCase:
         raise RuntimeError("Failed to initialize AWS Textract adapter")
 
     return ProcessE14TextractUseCase(textract_adapter)
+
+
+def get_process_e14_textract_queries_use_case() -> ProcessE14TextractQueriesUseCase:
+    """
+    Get process E-14 with Textract TABLES + QUERIES use case.
+
+    Creates AWS Textract TABLES + QUERIES adapter and returns use case for E-14 processing.
+    Uses advanced features for ~95% accuracy.
+
+    Configuration is loaded from config/settings.yaml under 'aws' section.
+    Uses boto3 default credentials chain if access keys not provided in config.
+    """
+    import boto3
+    from src.infrastructure.ocr.textract_queries.textract_queries_adapter import TextractQueriesAdapter
+    from src.infrastructure.ocr.textract_queries.queries_builder import QueriesBuilder
+    from src.infrastructure.ocr.textract_queries.tables_parser import TablesParser
+    from src.infrastructure.ocr.textract_queries.results_assembler import ResultsAssembler
+    from src.shared.config.yaml_config import YAMLConfig
+
+    yaml_config = YAMLConfig("config/settings.yaml")
+
+    aws_region = yaml_config.get('aws.region', 'us-east-1')
+    aws_access_key_id = yaml_config.get('aws.access_key_id', '')
+    aws_secret_access_key = yaml_config.get('aws.secret_access_key', '')
+    max_queries_per_batch = yaml_config.get('aws.textract_max_queries_per_batch', 15)
+
+    # Use explicit credentials if provided, otherwise boto3 uses default chain
+    # (env vars → ~/.aws/credentials → IAM role)
+    if aws_access_key_id and aws_secret_access_key:
+        textract_client = boto3.client(
+            'textract',
+            region_name=aws_region,
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key
+        )
+    else:
+        textract_client = boto3.client(
+            'textract',
+            region_name=aws_region
+        )
+
+    queries_builder = QueriesBuilder()
+    tables_parser = TablesParser()
+    results_assembler = ResultsAssembler()
+
+    adapter = TextractQueriesAdapter(
+        textract_client=textract_client,
+        queries_builder=queries_builder,
+        tables_parser=tables_parser,
+        results_assembler=results_assembler,
+        max_queries_per_batch=max_queries_per_batch
+    )
+
+    return ProcessE14TextractQueriesUseCase(adapter)
