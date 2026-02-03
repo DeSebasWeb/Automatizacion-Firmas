@@ -33,3 +33,16 @@ ui:
   theme: light               # Tema de la interfaz (light/dark)
   window_width: 900          # Ancho de ventana
   window_height: 700         # Alto de ventana
+
+
+# AWS Configuration
+aws:
+  region: us-east-1
+  # Credentials (optional - if not provided, uses default credentials chain)
+  # Boto3 credentials chain: env vars → ~/.aws/credentials → IAM role
+  # Dejar vacío para usar credenciales por defecto
+  access_key_id: ""
+  secret_access_key: ""
+
+  # Textract QUERIES configuration
+  textract_max_queries_per_batch: 15  # AWS limit is 15 queries per batch
