@@ -1,0 +1,58 @@
+{
+  "e14":{
+    "pagina":"01 de 09",
+    "divipol":{
+      "CodDep":"16",
+      "CodMun": "001",
+      "zona": "01",
+      "Puesto":"01",
+      "Mesa":"001"
+    },
+    "TotalSufragantesE14":"134",
+    "TotalVotosEnUrna":"131",
+    "TotalIncinerados":"***",
+    "Partido":[
+      {
+        "numPartido":"0261",
+        "nombrePartido":"COALICION CENTRO ESPERANZA",
+        "tipoDeVoto":"ListaConVotoPreferente",
+        "id":"0",
+        "votosSoloPorLaAgrupacionPolitica":"1",
+        "candidatos":[
+          {
+            "idcandidato":"101",
+            "votos":"2"
+          },
+          {
+            "idcandidato":"107",
+            "votos":"///"
+          },
+          {
+            "idcandidato":"113",
+            "votos":"///"
+          }
+        ],
+        "TotalVotosAgrupacion+VotosCandidatos":"4"
+      },
+      {
+        "numPartido":"0290",
+        "nombrePartido":"PactoHistorico",
+        "tipoDeVoto":"ListaSinVotoPreferente",
+        "id":"0",
+        "votosSoloPorLaAgrupacionPolitica":"11",
+        "candidatos":[]
+      },
+      {
+        "numPartido":"0290",
+        "nombrePartido":"PactoHistorico",
+        "tipoDeVoto":"ListaSinVotoPreferente",
+        "id":"0",
+        "votosSoloPorLaAgrupacionPolitica":"11",
+        "candidatos":[]
+      }
+    ]
+
+    
+  }
+
+}
