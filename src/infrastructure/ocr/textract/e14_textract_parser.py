@@ -11,6 +11,7 @@ from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
 
 from .parsers.totales_mesa_parser import TotalesMesaParser
+from .parsers.partido_parser import PartidoParser
 
 logger = structlog.get_logger(__name__)
 
@@ -52,8 +53,8 @@ class E14TextractParser:
         self.logger = logger.bind(parser="e14_textract")
         self.warnings: List[str] = []
         self.state = ParserState()
-        # Usar el nuevo TotalesMesaParser modular
         self.totales_parser = TotalesMesaParser()
+        self.partido_parser = PartidoParser()
 
     def parse(self, text: str) -> Dict[str, Any]:
         """
@@ -107,9 +108,12 @@ class E14TextractParser:
         # Agregar warnings del TotalesMesaParser
         self.warnings.extend(self.totales_parser.warnings)
 
-        # 4. Extraer partidos
-        partidos = self._extract_partidos(lines)
-        result["e14"]["Partido"] = partidos
+        # 4. Extraer partidos (usando nuevo PartidoParser)
+        partidos_result = self.partido_parser.parse(lines)
+        result["e14"]["Partido"] = partidos_result.get("Partido", [])
+
+        # Agregar warnings del PartidoParser
+        self.warnings.extend(self.partido_parser.warnings)
 
         # Validaciones finales
         self._validate_result(result)
