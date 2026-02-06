@@ -1,0 +1,80 @@
+=== ANALISIS DETALLADO DE TABLAS ===
+
+PartidoHoja2:
+  Columnas: 12
+  Nombres columnas: ['ID Candidato1', 'casilla 1', 'casilla 2', 'casilla 3', 'ID candidato2', 'casilla 4', 'casilla 5', 'casilla 6', 'ID Candidato3', 'Casilla 7', 'casilla 8', 'casilla 9']
+  Filas: 33
+  Nombres filas (primeras 5): ['ROW1', 'ROW2', 'ROW3', 'ROW4', 'ROW5']
+
+PartidoHoja3:
+  Columnas: 12
+  Nombres columnas: ['IDCandidato1', 'Casilla1', 'Casilla2', 'Casilla3', 'IDCandidato2', 'Casilla4', 'Casilla5', 'Casilla6', 'IDCandidato3', 'Casilla7', 'Casilla8', 'Casilla9']
+  Filas: 28
+  Nombres filas (primeras 5): ['ROW1', 'ROW2', 'ROW3', 'ROW4', 'ROW5']
+
+PartidoHoja4:
+  Columnas: 12
+  Nombres columnas: ['IDCandidato1', 'Casilla1', 'Casilla2', 'Casilla3', 'IDCandidato2', 'Casilla4', 'Casilla5', 'Casilla6', 'IDCandidato3', 'Casilla7', 'Casilla8', 'Casilla9']
+  Filas: 32
+  Nombres filas (primeras 5): ['ROW1', 'ROW2', 'ROW3', 'ROW4', 'ROW5']
+
+PartidoHoja5:
+  Columnas: 12
+  Nombres columnas: ['IDCandidato1', 'Casilla1', 'Casilla2', 'Casilla3', 'IDCandidato2', 'Casilla4', 'Casilla5', 'Casilla6', 'IDCandidato3', 'Casilla7', 'Casilla8', 'Casilla9']
+  Filas: 21
+  Nombres filas (primeras 5): ['ROW1', 'ROW2', 'ROW3', 'ROW4', 'ROW5']
+
+PartidoHoja6:
+  Columnas: 12
+  Nombres columnas: ['IDCandidato1', 'Casilla1', 'Casilla2', 'Casilla3', 'IDCandidato2', 'Casilla4', 'Casilla5', 'Casilla6', 'IDCandidato3', 'Casilla7', 'Casilla8', 'Casilla9']
+  Filas: 33
+  Nombres filas (primeras 5): ['ROW1', 'ROW2', 'ROW3', 'ROW4', 'ROW5']
+
+PartidoHoja7:
+  Columnas: 12
+  Nombres columnas: ['IDCandidato1', 'Casilla1', 'Casilla2', 'Casilla3', 'IDCandidato2', 'Casilla4', 'Casilla5', 'Casilla6', 'IDCandidato3', 'Casilla7', 'Casilla8', 'Casilla9']
+  Filas: 25
+  Nombres filas (primeras 5): ['ROW1', 'ROW2', 'ROW3', 'ROW4', 'ROW5']
+
+PartidoHoja8:
+  Columnas: 12
+  Nombres columnas: ['IDCandidato1', 'Casilla1', 'Casilla2', 'Casilla3', 'IDCandidato2', 'Casilla4', 'Casilla5', 'Casilla6', 'IDCandidato3', 'Casilla7', 'Casilla8', 'Casilla9']
+  Filas: 26
+  Nombres filas (primeras 5): ['ROW1', 'ROW2', 'ROW3', 'ROW4', 'ROW5']
+
+PartidoHoja9:
+  Columnas: 12
+  Nombres columnas: ['IDCandidato1', 'Casilla1', 'Casilla2', 'Casilla3', 'IDCandidato2', 'Casilla4', 'Casilla5', 'Casilla6', 'IDCandidato3', 'Casilla7', 'Casilla8', 'Casilla9']
+  Filas: 33
+  Nombres filas (primeras 5): ['ROW1', 'ROW2', 'ROW3', 'ROW4', 'ROW5']
+
+Partido3Pagina10:
+  Columnas: 12
+  Nombres columnas: ['IDCandidato1', 'Casilla1', 'Casilla2', 'Casilla3', 'IDCandidato2', 'Casilla4', 'Casilla5', 'Casilla6', 'IDCandidato3', 'Casilla7', 'Casilla8', 'Casilla9']
+  Filas: 1
+  Nombres filas (primeras 5): ['ROW1']
+
+Partido4Pag10:
+  Columnas: 12
+  Nombres columnas: ['IDCandidato1', 'Casilla1', 'Casilla2', 'Casilla3', 'IDCandidato2', 'Casilla4', 'Casilla5', 'Casilla6', 'IDCandidato3', 'Casilla7', 'Casilla8', 'Casilla9']
+  Filas: 1
+  Nombres filas (primeras 5): ['ROW1']
+
+Partido5Pagina10:
+  Columnas: 12
+  Nombres columnas: ['IDCandidato1', 'Casilla1', 'Casilla2', 'Casilla3', 'IDCandidato2', 'Casilla4', 'Casilla5', 'Casilla6', 'IDCandidato3', 'Casilla7', 'Casilla8', 'Casilla9']
+  Filas: 1
+  Nombres filas (primeras 5): ['ROW1']
+
+Partido8Hoja10:
+  Columnas: 12
+  Nombres columnas: ['IDCandidato1', 'Casilla1', 'Casilla2', 'Casilla3', 'IDCandidato2', 'Casilla4', 'Casilla5', 'Casilla6', 'IDCandidato3', 'Casilla7', 'Casilla8', 'Casilla9']
+  Filas: 1
+  Nombres filas (primeras 5): ['ROW1']
+
+ConsolidadoVotos2Pag11:
+  Columnas: 4
+  Nombres columnas: ['COLUMN1', 'COLUMN2', 'COLUMN3', 'COLUMN4']
+  Filas: 3
+  Nombres filas (primeras 5): ['ROW1', 'ROW2', 'ROW3']
+
