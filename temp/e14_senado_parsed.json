@@ -1,0 +1,3175 @@
+{
+  "e14": {
+    "pagina": "01 de 11",
+    "divipol": {
+      "CodDep": "72",
+      "CodMun": "006",
+      "zona": "99",
+      "Puesto": "55",
+      "Mesa": "002"
+    },
+    "TotalSufragantesE14": "44",
+    "TotalVotosEnUrna": "-44",
+    "TotalIncinerados": "---",
+    "Partido": [
+      {
+        "numPartido": "0013",
+        "nombrePartido": "PARTIDO COMUNES",
+        "tipoDeVoto": "ListaSinVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "0",
+        "candidatos": [],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      }
+    ],
+    "pagina2": "02 de 11",
+    "divipol2": {
+      "CodDep": "72",
+      "CodMun": "006",
+      "zona": "99",
+      "Puesto": "55",
+      "Mesa": "002"
+    },
+    "Partido2": [
+      {
+        "numPartido": "0255",
+        "nombrePartido": "COALICIÓN ALIANZA VERDE Y CENTRO ESPERANZA",
+        "tipoDeVoto": "ListaConVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "-",
+        "candidatos": [
+          {
+            "idcandidato": "1",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "2",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "3",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "4",
+            "votos": "2"
+          },
+          {
+            "idcandidato": "5",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "6",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "7",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "8",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "9",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "10",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "11",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "12",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "13",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "14",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "15",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "16",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "17",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "18",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "19",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "20",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "21",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "22",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "23",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "24",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "25",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "26",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "27",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "28",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "29",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "30",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "31",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "32",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "33",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "34",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "35",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "36",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "37",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "38",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "39",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "40",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "41",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "42",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "43",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "44",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "45",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "46",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "47",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "48",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "49",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "50",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "51",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "52",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "53",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "54",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "55",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "56",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "57",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "58",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "59",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "60",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "61",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "62",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "63",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "64",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "65",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "67",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "68",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "69",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "70",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "71",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "72",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "73",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "74",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "75",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "76",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "77",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "78",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "79",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "80",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "81",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "82",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "83",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "84",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "85",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "86",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "87",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "88",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "89",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "90",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "91",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "92",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "93",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "94",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "95",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "96",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "97",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "98",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "99",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "100",
+            "votos": "0"
+          }
+        ],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      }
+    ],
+    "pagina3": "03 de 11",
+    "divipol3": {
+      "CodDep": "72",
+      "CodMun": "006",
+      "zona": "99",
+      "Puesto": "55",
+      "Mesa": "002"
+    },
+    "Partido3": [
+      {
+        "numPartido": "1140",
+        "nombrePartido": "FUERZA CIUDADANA LA FUERZA DEL CAMBIO",
+        "tipoDeVoto": "ListaConVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "0",
+        "candidatos": [
+          {
+            "idcandidato": "1",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "2",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "3",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "4",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "5",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "6",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "7",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "8",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "9",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "10",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "11",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "12",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "14",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "15",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "16",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "17",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "18",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "19",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "20",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "21",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "22",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "23",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "24",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "25",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "27",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "29",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "30",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "31",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "32",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "33",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "35",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "36",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "37",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "38",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "40",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "41",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "42",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "43",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "44",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "45",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "46",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "47",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "48",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "50",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "51",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "52",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "53",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "54",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "55",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "56",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "57",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "58",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "59",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "60",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "61",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "62",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "63",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "64",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "66",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "67",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "69",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "71",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "72",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "73",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "76",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "77",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "78",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "79",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "80",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "81",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "82",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "83",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "84",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "85",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "86",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "87",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "88",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "89",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "90",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "91",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "92",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "99",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "100",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "",
+            "votos": "0"
+          }
+        ],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      }
+    ],
+    "pagina4": "04 de 11",
+    "divipol4": {
+      "CodDep": "72",
+      "CodMun": "006",
+      "zona": "99",
+      "Puesto": "55",
+      "Mesa": "002"
+    },
+    "Partido4": [
+      {
+        "numPartido": "0003",
+        "nombrePartido": "PARTIDO CAMBIO RADICAL",
+        "tipoDeVoto": "ListaConVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "1",
+        "candidatos": [
+          {
+            "idcandidato": "1",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "2",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "3",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "4",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "5",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "6",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "7",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "8",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "9",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "10",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "11",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "12",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "13",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "14",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "15",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "16",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "17",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "18",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "19",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "20",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "21",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "22",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "23",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "24",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "26",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "27",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "28",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "29",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "30",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "31",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "32",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "34",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "35",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "36",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "37",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "38",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "39",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "40",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "41",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "42",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "43",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "44",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "45",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "46",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "47",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "48",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "49",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "50",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "51",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "52",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "53",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "54",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "55",
+            "votos": "4"
+          },
+          {
+            "idcandidato": "56",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "57",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "58",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "59",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "60",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "61",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "62",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "63",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "64",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "66",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "68",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "69",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "70",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "71",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "72",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "73",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "74",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "75",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "76",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "77",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "78",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "79",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "80",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "81",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "82",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "83",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "84",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "85",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "86",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "87",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "88",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "89",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "90",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "91",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "93",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "94",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "95",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "96",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "97",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "98",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "99",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "100",
+            "votos": "1"
+          },
+          {
+            "idcandidato": "",
+            "votos": "0"
+          }
+        ],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      },
+      {
+        "numPartido": "1073",
+        "nombrePartido": "MOVIMIENTO NACIONAL SECTOR ORGANIZADO DE LA SALUD SOS COLOMBIA",
+        "tipoDeVoto": "ListaSinVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "0",
+        "candidatos": [],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      },
+      {
+        "numPartido": "0019",
+        "nombrePartido": "PARTIDO NUEVO LIBERALISMO",
+        "tipoDeVoto": "ListaSinVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "0",
+        "candidatos": [],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      }
+    ],
+    "pagina5": "05 de 11",
+    "divipol5": {
+      "CodDep": "72",
+      "CodMun": "006",
+      "zona": "99",
+      "Puesto": "55",
+      "Mesa": "002"
+    },
+    "Partido5": [
+      {
+        "numPartido": "1130",
+        "nombrePartido": "",
+        "tipoDeVoto": "ListaSinVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "0",
+        "candidatos": [],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      },
+      {
+        "numPartido": "1039",
+        "nombrePartido": "MOVIMIENTO UNITARIO METAPOLITICO",
+        "tipoDeVoto": "ListaSinVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "0",
+        "candidatos": [],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      },
+      {
+        "numPartido": "0231",
+        "nombrePartido": "COALICIÓN MIRA - COLOMBIA JUSTA LIBRES",
+        "tipoDeVoto": "ListaConVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "-",
+        "candidatos": [
+          {
+            "idcandidato": "1",
+            "votos": "1"
+          },
+          {
+            "idcandidato": "2",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "3",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "4",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "5",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "6",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "7",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "8",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "9",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "10",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "11",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "12",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "13",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "14",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "15",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "17",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "18",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "19",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "20",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "21",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "22",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "23",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "24",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "25",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "26",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "27",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "29",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "30",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "31",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "33",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "35",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "36",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "37",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "38",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "39",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "40",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "41",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "43",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "45",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "47",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "49",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "50",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "51",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "53",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "55",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "57",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "59",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "61",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "63",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "65",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "67",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "69",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "70",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "71",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "73",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "75",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "77",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "79",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "81",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "83",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "90",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "100",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "",
+            "votos": "0"
+          }
+        ],
+        "TotalVotosAgrupacion+VotosCandidatos": "1"
+      }
+    ],
+    "pagina6": "06 de 11",
+    "divipol6": {
+      "CodDep": "72",
+      "CodMun": "006",
+      "zona": "99",
+      "Puesto": "55",
+      "Mesa": "002"
+    },
+    "Partido6": [
+      {
+        "numPartido": "0001",
+        "nombrePartido": "PARTIDO LIBERAL COLOMBIANO",
+        "tipoDeVoto": "ListaConVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "3",
+        "candidatos": [
+          {
+            "idcandidato": "1",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "2",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "3",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "4",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "5",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "6",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "7",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "8",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "9",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "10",
+            "votos": "6"
+          },
+          {
+            "idcandidato": "11",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "12",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "13",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "14",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "15",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "16",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "17",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "18",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "19",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "21",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "22",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "23",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "24",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "25",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "26",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "27",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "28",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "29",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "30",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "31",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "32",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "33",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "34",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "35",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "36",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "37",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "38",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "39",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "40",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "41",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "42",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "43",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "44",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "45",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "46",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "47",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "48",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "49",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "50",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "51",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "52",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "53",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "54",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "55",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "56",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "57",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "58",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "59",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "60",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "61",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "62",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "63",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "64",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "65",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "66",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "67",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "68",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "69",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "70",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "71",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "72",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "73",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "74",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "75",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "76",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "77",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "78",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "79",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "80",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "81",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "82",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "83",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "84",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "85",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "86",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "87",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "88",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "89",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "90",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "91",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "92",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "93",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "94",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "95",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "96",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "97",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "98",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "99",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "100",
+            "votos": "1"
+          }
+        ],
+        "TotalVotosAgrupacion+VotosCandidatos": "10"
+      },
+      {
+        "numPartido": "1186",
+        "nombrePartido": "MOVIMIENTO GENTE NUEVA",
+        "tipoDeVoto": "ListaSinVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "0",
+        "candidatos": [],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      },
+      {
+        "numPartido": "0302",
+        "nombrePartido": "MOVIMIENTO DE SALVACIÓN NACIONAL",
+        "tipoDeVoto": "ListaSinVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "0",
+        "candidatos": [],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      }
+    ],
+    "pagina7": "07 de 11",
+    "divipol7": {
+      "CodDep": "72",
+      "CodMun": "006",
+      "zona": "99",
+      "Puesto": "55",
+      "Mesa": "002"
+    },
+    "Partido7": [
+      {
+        "numPartido": "0011",
+        "nombrePartido": "PARTIDO CENTRO DEMOCRÁTICO",
+        "tipoDeVoto": "ListaConVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "25",
+        "candidatos": [
+          {
+            "idcandidato": "1",
+            "votos": "1"
+          },
+          {
+            "idcandidato": "2",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "3",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "4",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "5",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "6",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "7",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "8",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "9",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "10",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "11",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "12",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "13",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "14",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "15",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "16",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "17",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "18",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "19",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "20",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "21",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "22",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "23",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "25",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "26",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "27",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "28",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "29",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "30",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "31",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "32",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "33",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "34",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "35",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "36",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "37",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "38",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "40",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "42",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "43",
+            "votos": "2"
+          },
+          {
+            "idcandidato": "44",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "45",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "47",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "48",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "49",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "50",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "52",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "53",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "54",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "55",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "58",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "59",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "60",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "61",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "62",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "63",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "65",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "66",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "67",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "68",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "69",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "70",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "71",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "74",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "75",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "77",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "80",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "86",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "87",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "88",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "89",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "90",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "98",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "99",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "100",
+            "votos": "0"
+          }
+        ],
+        "TotalVotosAgrupacion+VotosCandidatos": "5"
+      }
+    ],
+    "pagina8": "08 de 11",
+    "divipol8": {
+      "CodDep": "72",
+      "CodMun": "006",
+      "zona": "99",
+      "Puesto": "55",
+      "Mesa": "002"
+    },
+    "Partido8": [
+      {
+        "numPartido": "0002",
+        "nombrePartido": "PARTIDO CONSERVADOR COLOMBIANO",
+        "tipoDeVoto": "ListaConVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "0",
+        "candidatos": [
+          {
+            "idcandidato": "1",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "2",
+            "votos": "1"
+          },
+          {
+            "idcandidato": "3",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "4",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "5",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "6",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "7",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "8",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "9",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "10",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "11",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "12",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "13",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "14",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "15",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "16",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "17",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "18",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "19",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "20",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "21",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "22",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "23",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "24",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "25",
+            "votos": "1"
+          },
+          {
+            "idcandidato": "27",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "28",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "29",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "30",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "31",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "32",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "33",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "34",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "35",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "36",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "37",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "40",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "42",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "43",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "45",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "46",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "47",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "49",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "50",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "51",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "52",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "54",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "55",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "56",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "57",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "58",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "59",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "60",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "62",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "65",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "68",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "69",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "70",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "74",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "77",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "78",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "79",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "80",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "81",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "82",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "83",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "84",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "85",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "86",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "87",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "88",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "90",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "91",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "93",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "95",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "96",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "97",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "100",
+            "votos": "0"
+          }
+        ],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      }
+    ],
+    "pagina9": "09 de 11",
+    "divipol9": {
+      "CodDep": "72",
+      "CodMun": "006",
+      "zona": "99",
+      "Puesto": "55",
+      "Mesa": "002"
+    },
+    "Partido9": [
+      {
+        "numPartido": "0008",
+        "nombrePartido": "PARTIDO DE LA UNIÓN POR LA GENTE \"PARTIDO DE LA U\"",
+        "tipoDeVoto": "ListaConVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "0",
+        "candidatos": [
+          {
+            "idcandidato": "1",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "2",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "3",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "4",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "5",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "6",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "7",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "8",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "9",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "10",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "11",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "12",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "13",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "14",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "15",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "16",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "17",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "18",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "19",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "20",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "21",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "22",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "23",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "24",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "25",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "26",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "27",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "28",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "29",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "30",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "31",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "33",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "34",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "35",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "36",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "37",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "38",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "39",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "40",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "41",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "42",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "43",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "44",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "45",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "46",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "47",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "48",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "49",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "50",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "51",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "52",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "53",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "54",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "55",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "56",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "57",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "58",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "59",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "60",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "61",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "62",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "63",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "64",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "65",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "66",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "67",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "68",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "69",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "70",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "71",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "72",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "73",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "74",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "75",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "76",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "77",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "78",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "79",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "80",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "81",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "82",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "83",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "84",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "85",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "86",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "87",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "88",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "89",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "90",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "91",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "92",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "93",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "94",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "95",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "96",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "97",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "98",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "99",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "100",
+            "votos": "0"
+          }
+        ],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      },
+      {
+        "numPartido": "0292",
+        "nombrePartido": "PACTO HISTÓRICO",
+        "tipoDeVoto": "ListaSinVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "3",
+        "candidatos": [],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      }
+    ],
+    "pagina10": "10 de 11",
+    "divipol10": {
+      "CodDep": "72",
+      "CodMun": "006",
+      "zona": "99",
+      "Puesto": "55",
+      "Mesa": "002"
+    },
+    "Partido10": [
+      {
+        "numPartido": "0184",
+        "nombrePartido": "ASOCIACIÓN DE CABILDOS INDÍGENAS POR COLOMBIA",
+        "tipoDeVoto": "ListaSinVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "0",
+        "candidatos": [],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      },
+      {
+        "numPartido": "0151",
+        "nombrePartido": "DEMOCRACIA DESDE ABAJO LA PALMA",
+        "tipoDeVoto": "ListaSinVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "0",
+        "candidatos": [],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      },
+      {
+        "numPartido": "0177",
+        "nombrePartido": "PARTIDO INDÍGENA COLOMBIANO P.I.C",
+        "tipoDeVoto": "ListaConVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "-",
+        "candidatos": [
+          {
+            "idcandidato": "201",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "202",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "203",
+            "votos": "0"
+          }
+        ],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      },
+      {
+        "numPartido": "0156",
+        "nombrePartido": "MOVIMIENTO ALTERNATIVO INDÍGENA SOCIAL \"MAIS\"",
+        "tipoDeVoto": "ListaConVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "4",
+        "candidatos": [
+          {
+            "idcandidato": "201",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "202",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "203",
+            "votos": "0"
+          }
+        ],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      },
+      {
+        "numPartido": "0166",
+        "nombrePartido": "MANDATO AMBIENTAL",
+        "tipoDeVoto": "ListaConVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "-",
+        "candidatos": [
+          {
+            "idcandidato": "201",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "202",
+            "votos": "0"
+          },
+          {
+            "idcandidato": "203",
+            "votos": "0"
+          }
+        ],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      },
+      {
+        "numPartido": "0167",
+        "nombrePartido": "ASOCIACIÓN NACIONAL DE CABILDOS Y AUTORIDADES INDÍGENAS EN COLOMBIA ANICOL",
+        "tipoDeVoto": "ListaSinVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "0",
+        "candidatos": [],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      },
+      {
+        "numPartido": "0181",
+        "nombrePartido": "RESGUARDO CAMPO ALEGRE",
+        "tipoDeVoto": "ListaSinVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "0",
+        "candidatos": [],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      },
+      {
+        "numPartido": "0186",
+        "nombrePartido": "MOVIMIENTO AUTORIDADES INDÍGENAS DE COLOMBIA \"AICO\"",
+        "tipoDeVoto": "ListaConVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "0",
+        "candidatos": [],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      }
+    ],
+    "pagina11": "11 de 11",
+    "divipol11": {
+      "CodDep": "72",
+      "CodMun": "006",
+      "zona": "99",
+      "Puesto": "55",
+      "Mesa": "002"
+    },
+    "Partido11": [
+      {
+        "numPartido": "0026",
+        "nombrePartido": "O.S.A ORGANIZACIÓN SOCIO-POLÍTICA ANCESTRAL",
+        "tipoDeVoto": "ListaSinVotoPreferente",
+        "id": "0",
+        "votosSoloPorLaAgrupacionPolitica": "0",
+        "candidatos": [],
+        "TotalVotosAgrupacion+VotosCandidatos": "---"
+      }
+    ],
+    "ConsolidadoVotos11": [
+      {
+        "tipo": "VOTOS EN BLANCO",
+        "votos": "---"
+      },
+      {
+        "tipo": "VOTOS NULOS",
+        "votos": "---"
+      },
+      {
+        "tipo": "VOTOS NO MARCADOS",
+        "votos": "---"
+      }
+    ]
+  }
+}

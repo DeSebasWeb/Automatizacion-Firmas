@@ -29,8 +29,12 @@ from src.infrastructure.database.models.subscription_billing_cycle import (
 from src.infrastructure.database.models.invoice_status import InvoiceStatus
 from src.infrastructure.database.models.payment_method import PaymentMethod
 from src.infrastructure.database.models.invoice_item_type import InvoiceItemType
-from src.infrastructure.database.models.api_permission_scope import APIPermissionScope
 from src.infrastructure.database.models.usage_event_type import UsageEventType
+
+# Permission System (NEW)
+from src.infrastructure.database.models.document_type import DocumentType
+from src.infrastructure.database.models.permission_type import PermissionType
+from src.infrastructure.database.models.api_permission_scope import APIPermissionScope
 
 # Core Entities
 from src.infrastructure.database.models.user import User
@@ -66,8 +70,11 @@ __all__ = [
     "InvoiceStatus",
     "PaymentMethod",
     "InvoiceItemType",
-    "APIPermissionScope",
     "UsageEventType",
+    # Permission System
+    "DocumentType",
+    "PermissionType",
+    "APIPermissionScope",
     # Core Entities
     "User",
     "UserProfile",

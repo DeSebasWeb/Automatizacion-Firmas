@@ -29,6 +29,8 @@ echo.
 echo [4/4] Instalando dependencias...
 pip install --upgrade pip
 pip install -r requirements.txt
+pip install -r requirements-api.txt
+pip install -r requirements-core.txt
 if errorlevel 1 (
     echo ERROR: No se pudieron instalar las dependencias
     pause

@@ -1,0 +1,177 @@
+=== ANALISIS DE ESTRUCTURA: PartidoHoja2 ===
+
+type: object, conf: 0.58
+  [ID Candidato1]:
+    type: object, conf: 0.299
+      [ROW1]:
+        type: string, value: '1', conf: 0.985
+      [ROW2]:
+        type: string, value: '2', conf: 0.985
+      [ROW3]:
+        type: string, value: '3', conf: 0.985
+      [ROW4]:
+        type: string, value: '4', conf: 0.986
+      [ROW5]:
+        type: string, value: '5', conf: 0.984
+      ... (33 campos totales)
+  [casilla 1]:
+    type: object, conf: 0.995
+      [ROW1]:
+        type: string, conf: 0.989
+      [ROW2]:
+        type: string, conf: 0.989
+      [ROW3]:
+        type: string, conf: 0.989
+      [ROW4]:
+        type: string, conf: 0.989
+      [ROW5]:
+        type: string, conf: 0.989
+      ... (33 campos totales)
+  [casilla 2]:
+    type: object, conf: 0.58
+      [ROW6]:
+        type: string, value: '--', conf: 0.558
+      [ROW1]:
+        type: string, conf: 0.989
+      [ROW2]:
+        type: string, conf: 0.989
+      [ROW3]:
+        type: string, conf: 0.989
+      [ROW4]:
+        type: string, conf: 0.994
+      ... (33 campos totales)
+  [casilla 3]:
+    type: object, conf: 0.545
+      [ROW6]:
+        type: string, value: '1', conf: 0.615
+      [ROW1]:
+        type: string, conf: 0.987
+      [ROW2]:
+        type: string, conf: 0.989
+      [ROW3]:
+        type: string, conf: 0.994
+      [ROW4]:
+        type: string, conf: 0.989
+      ... (33 campos totales)
+  [ID candidato2]:
+    type: object, conf: 0.979
+      [ROW1]:
+        type: string, value: '34', conf: 0.987
+      [ROW2]:
+        type: string, value: '35', conf: 0.983
+      [ROW3]:
+        type: string, value: '36', conf: 0.987
+      [ROW4]:
+        type: string, value: '37', conf: 0.988
+      [ROW5]:
+        type: string, value: '38', conf: 0.987
+      ... (33 campos totales)
+  ... (12 campos totales)
+
+
+=== ANALISIS DE ESTRUCTURA: PartidoHoja3 ===
+
+type: object, conf: 0.978
+  [IDCandidato1]:
+    type: object, conf: 0.331
+      [ROW1]:
+        type: string, value: '1', conf: 0.984
+      [ROW2]:
+        type: string, value: '2', conf: 0.978
+      [ROW3]:
+        type: string, value: '3', conf: 0.981
+      [ROW4]:
+        type: string, value: '4', conf: 0.987
+      [ROW5]:
+        type: string, value: '5', conf: 0.985
+      ... (28 campos totales)
+  [Casilla1]:
+    type: object, conf: 0.995
+      [ROW1]:
+        type: string, conf: 0.991
+      [ROW2]:
+        type: string, conf: 0.991
+      [ROW3]:
+        type: string, conf: 0.991
+      [ROW4]:
+        type: string, conf: 0.991
+      [ROW5]:
+        type: string, conf: 0.991
+      ... (28 campos totales)
+  [Casilla2]:
+    type: object, conf: 0.995
+      [ROW1]:
+        type: string, conf: 0.991
+      [ROW2]:
+        type: string, conf: 0.991
+      [ROW3]:
+        type: string, conf: 0.991
+      [ROW4]:
+        type: string, conf: 0.991
+      [ROW5]:
+        type: string, conf: 0.991
+      ... (28 campos totales)
+  [Casilla3]:
+    type: object, conf: 0.989
+      [ROW1]:
+        type: string, conf: 0.991
+      [ROW2]:
+        type: string, conf: 0.991
+      [ROW3]:
+        type: string, conf: 0.991
+      [ROW4]:
+        type: string, conf: 0.991
+      [ROW5]:
+        type: string, conf: 0.991
+      ... (28 campos totales)
+  [IDCandidato2]:
+    type: object, conf: 0.295
+      [ROW1]:
+        type: string, value: '32', conf: 0.987
+      [ROW2]:
+        type: string, value: '33', conf: 0.987
+      [ROW3]:
+        type: string, value: '35', conf: 0.988
+      [ROW4]:
+        type: string, value: '36', conf: 0.982
+      [ROW5]:
+        type: string, value: '37', conf: 0.988
+      ... (28 campos totales)
+  ... (12 campos totales)
+
+
+=== ANALISIS DE ESTRUCTURA: ConsolidadoVotos2Pag11 ===
+
+type: object, conf: 0.691
+  [COLUMN1]:
+    type: object, conf: 0.517
+      [ROW1]:
+        type: string, value: 'VOTOS EN BLANCO', conf: 0.926
+      [ROW2]:
+        type: string, value: 'VOTOS NULOS', conf: 0.978
+      [ROW3]:
+        type: string, value: 'VOTOS NO MARCADOS', conf: 0.975
+  [COLUMN2]:
+    type: object, conf: 0.994
+      [ROW1]:
+        type: string, conf: 0.989
+      [ROW2]:
+        type: string, conf: 0.993
+      [ROW3]:
+        type: string, conf: 0.989
+  [COLUMN3]:
+    type: object, conf: 0.994
+      [ROW1]:
+        type: string, conf: 0.989
+      [ROW2]:
+        type: string, conf: 0.989
+      [ROW3]:
+        type: string, conf: 0.99
+  [COLUMN4]:
+    type: object, conf: 0.994
+      [ROW1]:
+        type: string, conf: 0.989
+      [ROW2]:
+        type: string, conf: 0.989
+      [ROW3]:
+        type: string, conf: 0.989

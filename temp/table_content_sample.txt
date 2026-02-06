@@ -1,0 +1,23 @@
+=== CONTENIDO REAL DE PartidoHoja2 ===
+
+ESTRUCTURA: 12 columnas x 33 filas
+Patrón: ID Candidato1, casilla 1, casilla 2, casilla 3, ID candidato2, ...
+
+Primeras 4 columnas, primeras 10 filas:
+                     ID Candidato1   casilla 1       casilla 2       casilla 3      
+--------------------------------------------------------------------------------
+ROW1                 1               (vacío)         (vacío)         (vacío)        
+ROW2                 2               (vacío)         (vacío)         (vacío)        
+ROW3                 3               (vacío)         (vacío)         (vacío)        
+ROW4                 4               (vacío)         (vacío)         (vacío)        
+ROW5                 5               (vacío)         (vacío)         (vacío)        
+ROW6                 6               (vacío)         --              1              
+ROW7                 7               (vacío)         (vacío)         (vacío)        
+ROW8                 8               (vacío)         (vacío)         (vacío)        
+ROW9                 9               (vacío)         (vacío)         (vacío)        
+ROW10                10              (vacío)         (vacío)         (vacío)        
+
+
+TIPO DE DATOS:
+- ID Candidato: Números de candidatos (1, 2, 3, ...)
+- casilla X: Votos por candidato (vacíos, guiones, o números)

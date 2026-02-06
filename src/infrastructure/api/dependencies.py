@@ -10,8 +10,12 @@ import structlog
 from src.infrastructure.database.dependencies import get_db
 from src.infrastructure.database.repositories.user_repository_impl import UserRepository
 from src.infrastructure.database.repositories.api_key_repository_impl import APIKeyRepository
+from src.infrastructure.database.repositories.document_type_repository_impl import DocumentTypeRepository
+from src.infrastructure.database.repositories.permission_type_repository_impl import PermissionTypeRepository
 from src.domain.repositories.user_repository import IUserRepository
 from src.domain.repositories.api_key_repository import IAPIKeyRepository
+from src.domain.repositories.document_type_repository import IDocumentTypeRepository
+from src.domain.repositories.permission_type_repository import IPermissionTypeRepository
 from src.application.use_cases.register_user_use_case import RegisterUserUseCase
 from src.application.use_cases.authenticate_user_use_case import AuthenticateUserUseCase
 from src.application.use_cases.get_user_by_id_use_case import GetUserByIdUseCase
@@ -21,6 +25,16 @@ from src.application.use_cases.list_api_keys_use_case import ListAPIKeysUseCase
 from src.application.use_cases.revoke_api_key_use_case import RevokeAPIKeyUseCase
 from src.application.use_cases.get_api_key_scopes_use_case import GetAPIKeyScopesUseCase
 from src.application.use_cases.validate_api_key_use_case import InvalidCredentialsError
+from src.application.use_cases.list_document_types_use_case import ListDocumentTypesUseCase
+from src.application.use_cases.get_document_type_use_case import GetDocumentTypeUseCase
+from src.application.use_cases.list_permission_types_use_case import ListPermissionTypesUseCase
+from src.application.use_cases.list_available_scopes_use_case import ListAvailableScopesUseCase
+from src.application.use_cases.process_document_use_case import ProcessDocumentUseCase
+from src.application.use_cases.process_e14_textract_use_case import ProcessE14TextractUseCase
+from src.application.use_cases.process_e14_textract_queries_use_case import ProcessE14TextractQueriesUseCase
+from src.application.use_cases.process_e14_azure_di_use_case import ProcessE14AzureDIUseCase
+from src.application.use_cases.process_e14_senado_use_case import ProcessE14SenadoUseCase
+from src.application.factories.document_processor_factory import DocumentProcessorFactory
 from src.infrastructure.security.jwt_handler import JWTHandler
 from src.domain.entities.user import User
 from src.domain.entities.api_key import APIKey
@@ -426,3 +440,177 @@ async def get_optional_api_key(
 CurrentUser = Annotated[User, Depends(get_current_user)]
 CurrentAPIKey = Annotated[APIKey, Depends(get_api_key_from_header)]
 OptionalAPIKey = Annotated[Optional[APIKey], Depends(get_optional_api_key)]
+
+
+# =========================================================================
+# CATALOG REPOSITORY DEPENDENCIES
+# =========================================================================
+
+def get_document_type_repository(db: Session = Depends(get_db)) -> IDocumentTypeRepository:
+    """Get document type repository instance."""
+    return DocumentTypeRepository(db)
+
+
+def get_permission_type_repository(db: Session = Depends(get_db)) -> IPermissionTypeRepository:
+    """Get permission type repository instance."""
+    return PermissionTypeRepository(db)
+
+
+# =========================================================================
+# CATALOG USE CASE DEPENDENCIES
+# =========================================================================
+
+def get_list_document_types_use_case(
+    doc_type_repo: IDocumentTypeRepository = Depends(get_document_type_repository)
+) -> ListDocumentTypesUseCase:
+    """Get list document types use case."""
+    return ListDocumentTypesUseCase(doc_type_repo)
+
+
+def get_get_document_type_use_case(
+    doc_type_repo: IDocumentTypeRepository = Depends(get_document_type_repository)
+) -> GetDocumentTypeUseCase:
+    """Get document type use case."""
+    return GetDocumentTypeUseCase(doc_type_repo)
+
+
+def get_list_permission_types_use_case(
+    perm_type_repo: IPermissionTypeRepository = Depends(get_permission_type_repository)
+) -> ListPermissionTypesUseCase:
+    """Get list permission types use case."""
+    return ListPermissionTypesUseCase(perm_type_repo)
+
+
+def get_list_available_scopes_use_case(
+    perm_type_repo: IPermissionTypeRepository = Depends(get_permission_type_repository)
+) -> ListAvailableScopesUseCase:
+    """Get list available scopes use case."""
+    return ListAvailableScopesUseCase(perm_type_repo)
+
+
+# =========================================================================
+# DOCUMENT PROCESSING DEPENDENCIES
+# =========================================================================
+
+def get_document_processor_factory() -> DocumentProcessorFactory:
+    """
+    Get document processor factory.
+
+    Initializes OCR provider from config and creates factory.
+    """
+    from src.infrastructure.ocr.ocr_factory import create_ocr_adapter
+    from src.shared.config.yaml_config import YAMLConfig
+
+    config = YAMLConfig("config/settings.yaml")
+    ocr_provider = create_ocr_adapter(config)
+
+    if ocr_provider is None:
+        raise RuntimeError("Failed to initialize OCR provider")
+
+    return DocumentProcessorFactory(ocr_provider)
+
+
+def get_process_document_use_case(
+    processor_factory: DocumentProcessorFactory = Depends(get_document_processor_factory),
+    doc_type_repo: IDocumentTypeRepository = Depends(get_document_type_repository)
+) -> ProcessDocumentUseCase:
+    """Get process document use case."""
+    return ProcessDocumentUseCase(processor_factory, doc_type_repo)
+
+
+def get_process_e14_textract_use_case() -> ProcessE14TextractUseCase:
+    """
+    Get process E-14 with Textract use case.
+
+    Creates AWS Textract adapter and returns use case for E-14 processing.
+    """
+    from src.infrastructure.ocr.textract.textract_adapter import TextractAdapter
+    from src.shared.config.yaml_config import YAMLConfig
+
+    config = YAMLConfig("config/settings.yaml")
+    textract_adapter = TextractAdapter(config)
+
+    if not textract_adapter.is_available():
+        raise RuntimeError("Failed to initialize AWS Textract adapter")
+
+    return ProcessE14TextractUseCase(textract_adapter)
+
+
+def get_process_e14_textract_queries_use_case() -> ProcessE14TextractQueriesUseCase:
+    """
+    Get process E-14 with Textract TABLES + QUERIES use case.
+
+    Creates AWS Textract TABLES + QUERIES adapter and returns use case for E-14 processing.
+    Uses advanced features for ~95% accuracy.
+
+    Configuration is loaded from config/settings.yaml under 'aws' section.
+    Uses boto3 default credentials chain if access keys not provided in config.
+    """
+    import boto3
+    from src.infrastructure.ocr.textract_queries.textract_queries_adapter import TextractQueriesAdapter
+    from src.infrastructure.ocr.textract_queries.queries_builder import QueriesBuilder
+    from src.infrastructure.ocr.textract_queries.tables_parser import TablesParser
+    from src.infrastructure.ocr.textract_queries.results_assembler import ResultsAssembler
+    from src.shared.config.yaml_config import YAMLConfig
+
+    yaml_config = YAMLConfig("config/settings.yaml")
+
+    aws_region = yaml_config.get('aws.region', 'us-east-1')
+    aws_access_key_id = yaml_config.get('aws.access_key_id', '')
+    aws_secret_access_key = yaml_config.get('aws.secret_access_key', '')
+    max_queries_per_batch = yaml_config.get('aws.textract_max_queries_per_batch', 15)
+
+    # Use explicit credentials if provided, otherwise boto3 uses default chain
+    # (env vars → ~/.aws/credentials → IAM role)
+    if aws_access_key_id and aws_secret_access_key:
+        textract_client = boto3.client(
+            'textract',
+            region_name=aws_region,
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key
+        )
+    else:
+        textract_client = boto3.client(
+            'textract',
+            region_name=aws_region
+        )
+
+    queries_builder = QueriesBuilder()
+    tables_parser = TablesParser()
+    results_assembler = ResultsAssembler()
+
+    adapter = TextractQueriesAdapter(
+        textract_client=textract_client,
+        queries_builder=queries_builder,
+        tables_parser=tables_parser,
+        results_assembler=results_assembler,
+        max_queries_per_batch=max_queries_per_batch
+    )
+
+    return ProcessE14TextractQueriesUseCase(adapter)
+
+
+def get_process_e14_azure_di_use_case() -> ProcessE14AzureDIUseCase:
+    from src.infrastructure.ocr.azure_document_intelligence import AzureDocumentIntelligenceAdapter
+    from src.shared.config.yaml_config import YAMLConfig
+
+    config = YAMLConfig("config/settings.yaml")
+    adapter = AzureDocumentIntelligenceAdapter(config)
+
+    if not adapter.is_available():
+        raise RuntimeError("Failed to initialize Azure Document Intelligence adapter")
+
+    return ProcessE14AzureDIUseCase(adapter)
+
+
+def get_process_e14_senado_use_case() -> ProcessE14SenadoUseCase:
+    from src.infrastructure.ocr.azure_document_intelligence import AzureDocumentIntelligenceAdapter
+    from src.shared.config.yaml_config import YAMLConfig
+
+    config = YAMLConfig("config/settings.yaml")
+    adapter = AzureDocumentIntelligenceAdapter(config)
+
+    if not adapter.is_available():
+        raise RuntimeError("Failed to initialize Azure Document Intelligence adapter")
+
+    return ProcessE14SenadoUseCase(adapter)

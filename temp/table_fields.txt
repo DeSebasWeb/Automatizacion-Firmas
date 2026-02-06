@@ -1,0 +1,18 @@
+=== CAMPOS CON TABLAS (valueObject) ===
+
+Total campos con tablas: 13
+
+  - ConsolidadoVotos1Pag11
+  - ConsolidadoVotos2Pag11
+  - Partido3Pagina10
+  - Partido4Pag10
+  - Partido5Pagina10
+  - Partido8Hoja10
+  - PartidoHoja2
+  - PartidoHoja3
+  - PartidoHoja4
+  - PartidoHoja5
+  - PartidoHoja6
+  - PartidoHoja7
+  - PartidoHoja8
+  - PartidoHoja9
