@@ -19,6 +19,10 @@ google-cloud-vision>=3.11.0
 # Versión 1.0.0: GA release, Image Analysis 4.0 API con mejor OCR
 azure-ai-vision-imageanalysis>=1.0.0
 
+# Azure Document Intelligence - Custom trained models para formularios E-14
+# Versión 1.0.0+: GA release con soporte para modelos custom entrenados
+azure-ai-documentintelligence>=1.0.0
+
 # AWS Textract - OCR para documentos E-14
 # Versión 1.35.0+: Soporte completo para Textract document analysis
 boto3>=1.35.0            # AWS SDK for Python (incluye Textract)
