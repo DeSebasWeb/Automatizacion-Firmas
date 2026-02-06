@@ -114,3 +114,14 @@ aws:
   # Dejar vacío para usar credenciales por defecto
   access_key_id: ""
   secret_access_key: ""
+
+# Azure Document Intelligence Configuration
+azure_di:
+  # Custom trained model ID for E-14 forms
+  model_id: "e14-senado-v1"  # Replace with your custom model ID
+  # Maximum time to wait for document analysis (seconds)
+  # Azure DI normalmente responde en 27-32 segundos, 60 segundos es suficiente margen
+  polling_timeout_seconds: 60
+  # Credentials are loaded from environment variables:
+  # AZURE_DI_ENDPOINT=https://your-resource.cognitiveservices.azure.com/
+  # AZURE_DI_KEY=your_subscription_key
