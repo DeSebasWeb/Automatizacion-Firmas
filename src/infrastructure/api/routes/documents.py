@@ -11,12 +11,16 @@ from src.application.use_cases.process_document_use_case import (
 )
 from src.application.use_cases.process_e14_textract_use_case import ProcessE14TextractUseCase
 from src.application.use_cases.process_e14_textract_queries_use_case import ProcessE14TextractQueriesUseCase
+from src.application.use_cases.process_e14_azure_di_use_case import ProcessE14AzureDIUseCase
+from src.application.use_cases.process_e14_senado_use_case import ProcessE14SenadoUseCase
 from src.domain.entities.user import User
 from src.infrastructure.api.dependencies import (
     get_current_user,
     get_process_document_use_case,
     get_process_e14_textract_use_case,
-    get_process_e14_textract_queries_use_case
+    get_process_e14_textract_queries_use_case,
+    get_process_e14_azure_di_use_case,
+    get_process_e14_senado_use_case
 )
 from src.infrastructure.storage.json_storage import JSONStorage
 
@@ -445,6 +449,125 @@ async def process_e14_textract_queries(
 
         json_storage = JSONStorage()
         json_path = json_storage.save_result(result, file.filename)
+
+        return result
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Processing failed: {str(e)}"
+        )
+
+
+@router.post(
+    "/e14/azure-di/senado",
+    status_code=status.HTTP_200_OK,
+    summary="Process E-14 Senado with Azure Document Intelligence (Adaptive Parser)",
+    description="Process E-14 electoral form for SENADO using Azure Document Intelligence with adaptive page-based parser. Accepts PDF files (up to 11 pages). Returns structured JSON with per-page partido data."
+)
+async def process_e14_azure_di_senado(
+    file: UploadFile = File(..., description="E-14 PDF file (11 pages)"),
+    use_case: ProcessE14SenadoUseCase = Depends(get_process_e14_senado_use_case),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        if file.filename and not file.filename.lower().endswith('.pdf'):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only PDF files are accepted"
+            )
+
+        file_content = await file.read()
+
+        max_size = 50 * 1024 * 1024
+        if len(file_content) > max_size:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"File too large. Max: 50MB, got: {len(file_content) / 1024 / 1024:.2f}MB"
+            )
+
+        if len(file_content) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Empty file"
+            )
+
+        result = use_case.execute(file_content)
+
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Could not process E-14 document"
+            )
+
+        json_storage = JSONStorage()
+        json_path = json_storage.save_result(result, file.filename)
+
+        return result
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Processing failed: {str(e)}"
+        )
+
+
+@router.post(
+    "/e14/azure-di/camara/{codigo_depto}",
+    status_code=status.HTTP_200_OK,
+    summary="Process E-14 Cámara with Azure Document Intelligence",
+    description="Process E-14 electoral form for CAMARA using Azure Document Intelligence trained model. Accepts PDF files (up to 11 pages)."
+)
+async def process_e14_azure_di_camara(
+    codigo_depto: str,
+    file: UploadFile = File(..., description="E-14 PDF file (11 pages)"),
+    use_case: ProcessE14AzureDIUseCase = Depends(get_process_e14_azure_di_use_case),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        if file.filename and not file.filename.lower().endswith('.pdf'):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only PDF files are accepted"
+            )
+
+        file_content = await file.read()
+
+        max_size = 50 * 1024 * 1024
+        if len(file_content) > max_size:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"File too large. Max: 50MB, got: {len(file_content) / 1024 / 1024:.2f}MB"
+            )
+
+        if len(file_content) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Empty file"
+            )
+
+        result = use_case.execute(file_content)
+
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Could not process E-14 document"
+            )
+
+        if result.codigo_departamento != codigo_depto:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Department code mismatch. Expected: {codigo_depto}, got: {result.codigo_departamento}"
+            )
+
+        json_storage = JSONStorage()
+        json_path = json_storage.save_result(result.model_dump(), file.filename)
 
         return result
 

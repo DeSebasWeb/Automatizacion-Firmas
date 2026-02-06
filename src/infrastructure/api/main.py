@@ -2,6 +2,9 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from .config import settings
 from .routes import health, auth, api_keys, catalogs, documents

@@ -32,6 +32,8 @@ from src.application.use_cases.list_available_scopes_use_case import ListAvailab
 from src.application.use_cases.process_document_use_case import ProcessDocumentUseCase
 from src.application.use_cases.process_e14_textract_use_case import ProcessE14TextractUseCase
 from src.application.use_cases.process_e14_textract_queries_use_case import ProcessE14TextractQueriesUseCase
+from src.application.use_cases.process_e14_azure_di_use_case import ProcessE14AzureDIUseCase
+from src.application.use_cases.process_e14_senado_use_case import ProcessE14SenadoUseCase
 from src.application.factories.document_processor_factory import DocumentProcessorFactory
 from src.infrastructure.security.jwt_handler import JWTHandler
 from src.domain.entities.user import User
@@ -586,3 +588,29 @@ def get_process_e14_textract_queries_use_case() -> ProcessE14TextractQueriesUseC
     )
 
     return ProcessE14TextractQueriesUseCase(adapter)
+
+
+def get_process_e14_azure_di_use_case() -> ProcessE14AzureDIUseCase:
+    from src.infrastructure.ocr.azure_document_intelligence import AzureDocumentIntelligenceAdapter
+    from src.shared.config.yaml_config import YAMLConfig
+
+    config = YAMLConfig("config/settings.yaml")
+    adapter = AzureDocumentIntelligenceAdapter(config)
+
+    if not adapter.is_available():
+        raise RuntimeError("Failed to initialize Azure Document Intelligence adapter")
+
+    return ProcessE14AzureDIUseCase(adapter)
+
+
+def get_process_e14_senado_use_case() -> ProcessE14SenadoUseCase:
+    from src.infrastructure.ocr.azure_document_intelligence import AzureDocumentIntelligenceAdapter
+    from src.shared.config.yaml_config import YAMLConfig
+
+    config = YAMLConfig("config/settings.yaml")
+    adapter = AzureDocumentIntelligenceAdapter(config)
+
+    if not adapter.is_available():
+        raise RuntimeError("Failed to initialize Azure Document Intelligence adapter")
+
+    return ProcessE14SenadoUseCase(adapter)
