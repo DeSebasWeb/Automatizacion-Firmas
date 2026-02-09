@@ -134,6 +134,9 @@ class E14SenadoParser:
             num = total["partido_num"]
             if num in partidos_por_numero:
                 partidos_por_numero[num]["total"] = total
+            elif num is None and len(partidos_por_numero) == 1:
+                unico_partido_num = list(partidos_por_numero.keys())[0]
+                partidos_por_numero[unico_partido_num]["total"] = total
 
         for num in sorted(partidos_por_numero.keys()):
             partido_data = partidos_por_numero[num]
@@ -158,9 +161,16 @@ class E14SenadoParser:
             else:
                 partido["TotalVotosAgrupacion+VotosCandidatos"] = "---"
 
+            partido = self._filter_partido_fields(partido)
             partidos_result.append(partido)
 
         return partidos_result
+
+    def _filter_partido_fields(self, partido: dict) -> dict:
+        if partido.get("tipoDeVoto") == "ListaSinVotoPreferente":
+            return {k: v for k, v in partido.items()
+                    if k != "TotalVotosAgrupacion+VotosCandidatos"}
+        return partido
 
     def _parse_metadata_page1(self, page_data: dict, all_fields: dict) -> dict:
         metadata = {}
