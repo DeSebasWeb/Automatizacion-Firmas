@@ -25,6 +25,8 @@ wheels/
 
 #temporal 
 /data
+/temp
+temp
 
 # Virtual Environment
 venv/
